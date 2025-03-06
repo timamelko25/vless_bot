@@ -18,6 +18,6 @@ class Key(Base):
         lazy='selectin',
         )
     
-        
+    id_panel: Mapped[int]
     value: Mapped[str] = mapped_column(nullable=False)
     expires_at: Mapped[datetime] = mapped_column(nullable=False)

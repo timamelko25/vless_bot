@@ -3,7 +3,7 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import class_mapper
 
-from app.config import connection
+from app.database import connection
 
 
 class BaseService:
@@ -21,21 +21,21 @@ class BaseService:
 
     @classmethod
     @connection()
-    async def find_all(cls, session: AsyncSession, **filter_by):
+    async def find_all(cls, session, **filter_by):
         query = select(cls.model).filter_by(**filter_by)
         result = await session.execute(query)
         return result.scalars().all()
 
     @classmethod
     @connection()
-    async def find_one_or_none(cls, session: AsyncSession, **filter_by):
+    async def find_one_or_none(cls, session, **filter_by):
         query = select(cls.model).filter_by(**filter_by)
         result = await session.execute(query)
         return result.scalar_one_or_none()
 
     @classmethod
     @connection()
-    async def add(cls, session: AsyncSession, **values):
+    async def add(cls, session, **values):
         new_instance = cls.model(**values)
         session.add(new_instance)
         await session.flush()

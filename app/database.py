@@ -39,7 +39,7 @@ engine = create_async_engine(url=PG_URL)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 
-def connection(isolation_level: Optional[str] = None, commit: bool = True):
+def connection(isolation_level: str | None = None, commit: bool = True):
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):

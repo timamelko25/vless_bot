@@ -9,6 +9,8 @@ class User(Base):
     
     telegram_id: Mapped[int] = mapped_column(unique=True, nullable=False)
     username: Mapped[str | None] = mapped_column(nullable=True)
+    first_name: Mapped[str | None] = mapped_column(nullable=True)
+    last_name: Mapped[str | None] = mapped_column(nullable=True)
     balance: Mapped[int] = mapped_column(nullable=False, default=0)
     keys: Mapped[list['Key']] = relationship(
         back_populates='user',
