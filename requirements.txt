@@ -9,3 +9,4 @@ pydantic-settings==2.7.1
 aiohttp==3.11.11
 loguru==0.7.3
 alembic==1.14.1
+sqlalchemy-utils==0.41.2

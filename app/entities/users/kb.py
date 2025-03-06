@@ -37,7 +37,7 @@ def servers_inline_kb(servers: list)  -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 def prices_reply_kb() -> ReplyKeyboardMarkup:
-    kb = ReplyKeyboardBuilder(resize_keyboard=True)
+    kb = ReplyKeyboardBuilder()
     kb.button(text="100 💸")
     kb.button(text="250 💸")
     kb.button(text="500 💸")
