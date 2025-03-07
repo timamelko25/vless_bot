@@ -33,7 +33,9 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext)
         username=message.from_user.username,
         first_name=message.from_user.first_name,
         last_name=message.from_user.last_name,
+        refer_id=command.args
     )
+    
     user = await UserService.find_one_or_none(telegram_id=user_info.telegram_id)
 
     if user is None:
@@ -41,7 +43,11 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext)
             **user_info.model_dump()
         )
 
-        logger.info(f"New user reg {user_info.model_dump()}")
+        if user_info.refer_id:
+            UserService.update_count_refer(telegram_id=user_id)
+            logger.info(f"New user reg with ref system {user_info.model_dump()} with ref")
+        else:
+            logger.info(f"New user reg {user_info.model_dump()} with ref")
 
     command_args: str = command.args
 
@@ -87,11 +93,12 @@ async def profile_command(message: Message, state: FSMContext):
     date_expire = None
     if user is not None:
         await message.answer(
-            f"<b>💼 Личный кабинет</b>\n"
-            f"<b>💰 Баланс:</b> <i>{user.balance}</i>\n"
-            f"<b>📅 Ближайшая дата списания:</b> <i>{date_expire}</i>\n"
-            f"<b>🔗 Ваша реферальная ссылка:</b> <i>{ref_link}</i>\n"
-            f"✨ Используйте реферальную систему, чтобы получить бонусы и подарки!",
+            f" <b>💼 Личный кабинет</b>\n"
+            f" <b>💰 Баланс:</b> <i>{user.balance}</i>\n"
+            f" <b>📅 Ближайшая дата списания:</b> <i>{date_expire}</i>\n"
+            f" <b>🔗 Ваша реферальная ссылка:</b>\n"
+            f" <code>https://t.me/vless_tgbot?start={message.from_user.id} </code>\n"
+            f" ✨ Используйте реферальную систему, чтобы получить бонусы и подарки!",
             reply_markup=profile_inline_kb()
         )
 

@@ -24,3 +24,19 @@ class UserService(BaseService):
 
         await session.flush()
         return info
+    
+    @classmethod
+    @connection()
+    async def update_count_refer(cls, session: AsyncSession, telegram_id):
+        user = await cls.find_one_or_none(telegram_id=telegram_id)
+
+        if not user:
+            logger.warning("User not found while updating balance")
+
+        info = await cls.update(
+            filter_by={"telegram_id": f"{telegram_id}"},
+            count_refer=(user.count_refer + 1)
+        )
+
+        await session.flush()
+        return info

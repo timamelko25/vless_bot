@@ -14,6 +14,8 @@ class User(Base):
     first_name: Mapped[str] = mapped_column(nullable=True)
     last_name: Mapped[str] = mapped_column(nullable=True)
     balance: Mapped[float] = mapped_column(nullable=False, default=0)
+    refer_id: Mapped[str] = mapped_column(unique=True)
+    count_refer: Mapped[int] = mapped_column(default=0)
     description: Mapped[str] = mapped_column(nullable=True)
     
     keys: Mapped[List['Key']] = relationship(
