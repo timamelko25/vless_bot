@@ -10,12 +10,42 @@ from loguru import logger
 from app.config import bot, settings
 from app.utils.utils import del_msg
 
+from datetime import datetime
+
 from .schemas import NewUserScheme
 from .service import UserService
+from app.entities.servers.service import ServerService
+from app.entities.keys.service import KeyService
 
-from .kb import main_inline_kb, profile_inline_kb, servers_inline_kb, prices_reply_kb, kb_confirm_upd, home_inline_kb
+from .kb import main_inline_kb, profile_inline_kb, servers_inline_kb, keys_inline_kb, kb_confirm_upd, home_inline_kb, get_key_inline_kb
 
 router = Router()
+
+
+async def HOME_TEXT() -> str:
+    return (
+        f"<b>🌐 VPN bot на протоколе VLESS</b>\n\n"
+        f"⚡ <i>Быстрый</i>, <i>надёжный</i>\n"
+        f"🎁 <b>3 дня бесплатно</b>, до 3 устройств на 1 ключ\n"
+        f"💸 <b>70 рублей</b> за 1 ключ\n"
+        f"💎 Есть <b>реферальная система</b>\n"
+        f"<b>🚀 Почему выбирают нас:</b>\n"
+        f"1️⃣ Высокая скорость соединения\n"
+        f"2️⃣ Легкость в подключении и настройке\n"
+        f"3️⃣ Полная анонимность и безопасность данных\n"
+        f"<i>🔥 Подключайся и получай максимум от интернета!</i>\n"
+    )
+
+
+async def PROFILE_TEXT(balance: float, date_expire: datetime | None, refer_id: str) -> str:
+    return (
+        f" <b>💼 Личный кабинет</b>\n\n"
+        f" <b>💰 Баланс:</b> <i>{balance}</i>\n"
+        f" <b>📅 Ближайшая дата списания:</b> <i>{date_expire}</i>\n"
+        f" <b>🔗 Ваша реферальная ссылка:</b>\n"
+        f" <code>https://t.me/vless_tgbot?start={refer_id} </code>\n"
+        f" ✨ Используйте реферальную систему, чтобы получить бонусы и подарки!"
+    )
 
 
 class AddBalance(StatesGroup):
@@ -26,16 +56,16 @@ class AddBalance(StatesGroup):
 @router.message(CommandStart())
 async def cmd_start(message: Message, command: CommandObject, state: FSMContext):
     await state.clear()
-    user_id = message.from_user.id
+    user_id = str(message.from_user.id)
 
     user_info = NewUserScheme(
-        telegram_id=str(user_id),
+        telegram_id=user_id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
         last_name=message.from_user.last_name,
         refer_id=command.args
     )
-    
+
     user = await UserService.find_one_or_none(telegram_id=user_info.telegram_id)
 
     if user is None:
@@ -44,43 +74,16 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext)
         )
 
         if user_info.refer_id:
-            UserService.update_count_refer(telegram_id=user_id)
-            logger.info(f"New user reg with ref system {user_info.model_dump()} with ref")
+            await UserService.update_count_refer(telegram_id=user_info.refer_id)
+            logger.info(
+                f"New user reg with ref system {user_info.model_dump()}")
         else:
-            logger.info(f"New user reg {user_info.model_dump()} with ref")
+            logger.info(f"New user reg {user_info.model_dump()}")
 
-    command_args: str = command.args
-
-    if command_args:
-        await message.answer(
-            f"<b>🌐 VPN bot на протоколе VLESS</b>\n"
-            f"⚡ <i>Быстрый</i>, <i>надёжный</i>\n"
-            f"🎁 <b>3 дня бесплатно</b>, до 3 устройств на 1 ключ\n"
-            f"💸 <b>70 рублей</b> за 1 ключ\n"
-            f"💎 Есть <b>реферальная система</b>\n"
-            f"<b>🚀 Почему выбирают нас:</b>\n"
-            f"1️⃣ Высокая скорость соединения\n"
-            f"2️⃣ Легкость в подключении и настройке\n"
-            f"3️⃣ Полная анонимность и безопасность данных\n"
-            f"<i>🔥 Подключайся и получай максимум от интернета!</i>",
-            f"🔗 Доп аргументы при переходе: <i>{command_args}</i>\n",
-            reply_markup=main_inline_kb(user_id)
-        )
-
-    else:
-        await message.answer(
-            f"<b>🌐 VPN bot на протоколе VLESS</b>\n"
-            f"⚡ <i>Быстрый</i>, <i>надёжный</i>\n"
-            f"🎁 <b>3 дня бесплатно</b>, до 3 устройств на 1 ключ\n"
-            f"💸 <b>70 рублей</b> за 1 ключ\n"
-            f"💎 Есть <b>реферальная система</b>\n"
-            f"<b>🚀 Почему выбирают нас:</b>\n"
-            f"1️⃣ Высокая скорость соединения\n"
-            f"2️⃣ Легкость в подключении и настройке\n"
-            f"3️⃣ Полная анонимность и безопасность данных\n"
-            f"<i>🔥 Подключайся и получай максимум от интернета!</i>",
-            reply_markup=main_inline_kb(user_id)
-        )
+    await message.answer(
+        text=await HOME_TEXT(),
+        reply_markup=main_inline_kb(message.from_user.id)
+    )
 
 
 @router.message(Command('profile'))
@@ -89,16 +92,9 @@ async def profile_command(message: Message, state: FSMContext):
 
     user = await UserService.find_one_or_none(telegram_id=str(message.from_user.id))
 
-    ref_link = None
-    date_expire = None
     if user is not None:
         await message.answer(
-            f" <b>💼 Личный кабинет</b>\n"
-            f" <b>💰 Баланс:</b> <i>{user.balance}</i>\n"
-            f" <b>📅 Ближайшая дата списания:</b> <i>{date_expire}</i>\n"
-            f" <b>🔗 Ваша реферальная ссылка:</b>\n"
-            f" <code>https://t.me/vless_tgbot?start={message.from_user.id} </code>\n"
-            f" ✨ Используйте реферальную систему, чтобы получить бонусы и подарки!",
+            text=await PROFILE_TEXT(user.balance, None, user.refer_id),
             reply_markup=profile_inline_kb()
         )
 
@@ -107,16 +103,7 @@ async def profile_command(message: Message, state: FSMContext):
 async def page_home(call: CallbackQuery):
 
     await call.message.edit_text(
-        f"<b>🌐 VPN bot на протоколе VLESS</b>\n"
-        f"⚡ <i>Быстрый</i>, <i>надёжный</i>\n"
-        f"🎁 <b>3 дня бесплатно</b>, до 3 устройств на 1 ключ\n"
-        f"💸 <b>70 рублей</b> за 1 ключ\n"
-        f"💎 Есть <b>реферальная система</b>\n"
-        f"<b>🚀 Почему выбирают нас:</b>\n"
-        f"1️⃣ Высокая скорость соединения\n"
-        f"2️⃣ Легкость в подключении и настройке\n"
-        f"3️⃣ Полная анонимность и безопасность данных\n"
-        f"<i>🔥 Подключайся и получай максимум от интернета!</i>",
+        text=await HOME_TEXT(),
         reply_markup=main_inline_kb(call.from_user.id)
     )
 
@@ -126,27 +113,74 @@ async def get_user_profile(call: CallbackQuery):
     # user service find user from_user.id
     user = await UserService.find_one_or_none(telegram_id=str(call.from_user.id))
 
-    ref_link = None
-    date_expire = None
     if user is not None:
         await call.message.edit_text(
-            f"<b>💼 Личный кабинет</b>\n"
-            f"<b>💰 Баланс:</b> <i>{user.balance}</i>\n"
-            f"<b>📅 Ближайшая дата списания:</b> <i>{date_expire}</i>\n"
-            f"<b>🔗 Ваша реферальная ссылка:</b> <i>{ref_link}</i>\n"
-            f"<i>✨ Используйте реферальную систему, чтобы получить бонусы и подарки!</i>",
+            text=await PROFILE_TEXT(user.balance, None, user.refer_id),
             reply_markup=profile_inline_kb()
         )
 
 
-@router.callback_query(F.data == 'get_server')
-async def get_servers(call: CallbackQuery):
-    # select
-    servers_list = ['Netherlands']
+@router.callback_query(F.data == 'get_help')
+async def get_help_for_key(call: CallbackQuery):
+
     await call.message.edit_text(
-        f"<b>🌍 Выберете сервер</b>",
-        reply_markup=servers_inline_kb(servers_list)
+        text=(
+            f"Инструкции для установки ключей"
+        ),
+        reply_markup=keys_inline_kb()
     )
+
+
+@router.callback_query(F.data == 'start_getting_key')
+async def get_servers(call: CallbackQuery):
+    servers_list = await ServerService.get_servers_list()
+    if servers_list:
+        await call.message.edit_text(
+            f"<b>🌍 Выберете сервер</b>",
+            reply_markup=servers_inline_kb(servers_list)
+        )
+    else:
+        await call.message.edit_text(
+            f"<b>🌍 Выберете сервер</b>",
+            reply_markup=servers_inline_kb(['Netherlands'])
+        )
+
+
+@router.callback_query(F.data == 'get_key')
+async def get_key(call: CallbackQuery):
+    user = await UserService.find_one_or_none(telegram_id=str(call.from_user.id))
+    server = call.data.split(':')[0]
+
+    if user.balance > 150:
+        key = await UserService.create_key(telegram_id=str(call.from_user.id), server=server)
+
+        logger.info(f"User {user.telegram_id} bought key {key.get('email')}")
+        
+        text = (
+            "🎉 <b>Поздравляю!</b> Вы приобрели ключ!\n\n"
+            f"🌍 <b>Страна покупки:</b> <code>{server}</code>\n"
+            f"📅 <b>Срок действия:</b> <code>{key.get('expiryTime')}</code>\n\n"
+            "🔑 <b>Ваш ключ:</b>\n"
+            f"<code>{key.get('value')}</code>\n\n"
+            "📜 Для активации воспользуйтесь прикрепленной инструкцией."
+        )
+
+        await call.message.edit_text(
+            text=text,
+            reply_markup=keys_inline_kb(),
+        )
+    else:
+        text = (
+            f"❌ <b>Недостаточно средств!</b>\n\n"
+            f"Текущий баланс {user.balance}\n"
+            f"Цена ключа <b>150 рублей</b> за 1 шт.\n"
+            f"💰 Сперва пополните баланс, чтобы получить ключ."
+        )
+
+        await call.message.edit_text(
+            text=text,
+            reply_markup=get_key_inline_kb(),
+        )
 
 
 @router.callback_query(F.data == 'top_up')
@@ -164,15 +198,16 @@ async def update_user_balance(call: CallbackQuery, state: FSMContext):
 async def get_balance(message: Message, state: FSMContext):
     try:
         balance = float(message.text.replace(',', '.').strip())
-        if balance <= 0:
-            await message.answer("Ошибка. Введите положительное число!")
+        if balance < 10:
+            await message.answer("Ошибка. Минимальная сумма пополнения 10")
+            return
+        elif balance > 10000:
+            await message.answer("Ошибка. Максимальная сумма пополнения 10000!")
             return
         await state.update_data(balance=balance)
 
-        # await del_msg(message, state)
 
         data = await state.get_data()
-        # await bot.delete_message(chat_id=message.from_user.id, message_id=data["last_msg_id"])
 
         text = (
             f"Баланс будет пополнен на:\n"
@@ -239,22 +274,24 @@ async def successful_payment(message: Message):
     }
 
     await UserService.update_balance(
-            telegram_id=str(user_id),
-            balance=balance
-        )
-    
+        telegram_id=str(user_id),
+        balance=balance
+    )
+
     for admin in settings.ADMINS_LIST:
         try:
             username = message.from_user.username
             user_info = f"@{username} ({message.from_user.id})" if username else f"c ID {message.from_user.id}"
-            
+
             await bot.send_message(text=(
-                        f"💲 Пользователь {user_info} пополнил баланс на {balance}"
-                    ))
+                f"💲 Пользователь {user_info} пополнил баланс на {balance}"
+            ))
         except Exception as e:
-            logger.error(f"Ошибка при отправке уведомления администраторам: {e}")
+            logger.error(
+                f"Ошибка при отправке уведомления администраторам: {e}")
 
     await message.edit_text(text="Баланс успешно пополнен!", reply_markup=home_inline_kb())
+
 
 @router.callback_query(F.data == 'promocode')
 async def get_promocode(call: CallbackQuery):

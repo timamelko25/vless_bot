@@ -85,7 +85,7 @@ async def admin_handler_user(call: CallbackQuery):
 
 @router.callback_query(F.data == 'get_all_keys', F.from_user.id.in_(settings.ADMINS_LIST))
 async def admin_get_all_keys(call: CallbackQuery):
-    data = get_inbounds()
+    data = await get_inbounds()
 
     inbounds = data.get('obj')
     for client in inbounds[0].get('clientStats'):
@@ -167,7 +167,7 @@ async def admin_confirm_add(call: CallbackQuery, state: FSMContext):
     await bot.delete_message(chat_id=call.from_user.id, message_id=data["last_msg_id"])
     del data["last_msg_id"]
     # make in key service generating key
-    key = add_client(data)
+    key = 1
 
 
 @router.callback_query(F.data == 'upd_balance_user', F.from_user.id.in_(settings.ADMINS_LIST))

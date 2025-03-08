@@ -43,7 +43,7 @@ class BaseService:
 
     @classmethod
     @connection()
-    async def update(cls, session: AsyncSession, filter_by, **values):
+    async def update(cls, session: AsyncSession, filter_by: dict, **values):
         query = (
             update(cls.model)
             .where(*[getattr(cls.model, k) == v for k, v in filter_by.items()])

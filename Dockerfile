@@ -6,8 +6,10 @@ ENV PYTHONDONOTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+
+RUN apk add --no-cache bash && \
+    pip install --no-cache-dir -r requirements.txt
 
 COPY . /app/
 
-CMD ["python app/main.py"]
+CMD ["bash", "-c", "alembic upgrade head && python app/main.py"]

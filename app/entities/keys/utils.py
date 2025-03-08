@@ -26,7 +26,7 @@ async def open_session(url=url_panel):
         async with session.post(url=url+path, json=data, ssl=False) as response:
             if response.status == 200:
                 data = await response.json()
-                return session
+                return session, response.cookies
             else:
                 logger.warning(f"Login failed {response.status}")
                 await session.close()
@@ -42,18 +42,17 @@ async def get_inbounds(url=url_panel) -> dict:
 
     path = '/panel/api/inbounds/list'
 
-    session = await open_session()
+    session, cookies = await open_session()
     if session is None:
         return {}
-    data = {}
 
     try:
-        async with session.get(url=url+path, ssl=False) as response:
+        async with session.get(url=url+path, cookies=cookies, ssl=False) as response:
             if response.status == 200:
-                data = await response.text()
-                data = data.replace('\\n', '')
+                data = await response.json()
+                logger.info("Data from panel got successfully")
                 await session.close()
-                return json.dumps(data)
+                return data
             else:
                 logger.warning(f"Failed to fetch inbounds {response.status}")
                 await session.close()
@@ -95,9 +94,9 @@ async def add_client(data, url=url_panel):
         "settings": json.dumps({
             "clients": [
                 {
-                    "id": str(uuid.uuid4()),
+                    "id": data.get('id'),
                     "flow": "xtls-rprx-vision",
-                    "email": str(uuid.uuid4()).replace('-', '')[:10],
+                    "email": data.get('email'),
                     "limitIp": data.get('limitIp'),
                     "totalGB": data.get('totalGB'),
                     "expiryTime": data.get('expiryTime'),
@@ -117,15 +116,14 @@ async def add_client(data, url=url_panel):
     session, cookies = await open_session()
     if session is None:
         return {}
-    
-    data = {}
 
     try:
         async with session.post(url=url+path, headers=headers, cookies=cookies, data=payload, ssl=False) as response:
             if response.status == 200:
-                data = await response.json()
+                info = await response.json()
+                logger.info(f"New client added to panel {data.get('email')}")
                 await session.close()
-                return data
+                return info
             else:
                 logger.warning(f"Failed to add client {response.status}")
                 await session.close()

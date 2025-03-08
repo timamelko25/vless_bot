@@ -3,21 +3,16 @@ services:
   aiogram:
     container_name: aiogram_vless
     build: ./
-    command: python app/main.py
+    command: bash -c "alembic upgrade head && python app/main.py"
     environment:
       - PYTHONPATH=/app
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     restart: always
 
   postgres:
     image: postgres:latest
     container_name: postgres_vless
     env_file:
-      - .env
+      - ./.env
     environment:
       POSTGRES_USER: ${PG_USER}
       POSTGRES_PASSWORD: ${PG_PASSWORD}

@@ -1,4 +1,8 @@
-from pydantic import BaseModel, Field
+from typing import Dict
+from pydantic import BaseModel, ConfigDict, Field
+from datetime import datetime
+from .models import User
+
 
 class NewUserScheme(BaseModel):
     telegram_id: str
@@ -6,3 +10,13 @@ class NewUserScheme(BaseModel):
     first_name: str | None
     last_name: str | None
     refer_id: str | None
+
+
+class KeyScheme(BaseModel):
+    user_id: str
+    user: Dict
+    id_panel: str
+    email: str
+    value: str
+    expires_at: str
+

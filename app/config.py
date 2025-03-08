@@ -15,8 +15,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     BOT_TOKEN: str
+    PROVIDER_TOKEN: str
     ADMINS_LIST: List[int]
-    #PROVIDER_TOKEN: str
     FORMAT_LOG: str = "{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}"
     LOG_ROTATION: str = "10 MB"
     
