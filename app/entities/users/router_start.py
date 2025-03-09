@@ -14,9 +14,10 @@ from app.config import bot, settings
 from app.utils.utils import del_msg
 from app.entities.servers.service import ServerService
 from app.entities.keys.service import KeyService
+from app.entities.promocodes.service import PromocodeService
 from .schemas import NewUserScheme
 from .service import UserService
-from .kb import main_inline_kb, profile_inline_kb, keys_inline_kb
+from .kb import main_inline_kb, profile_inline_kb, keys_inline_kb, promocode_inline_kb, home_inline_kb
 
 
 router = Router()
@@ -127,8 +128,43 @@ async def get_help_for_key(call: CallbackQuery):
 
 
 @router.callback_query(F.data == 'promocode')
-async def get_promocode(call: CallbackQuery):
-    pass
+async def start_promocode(call: CallbackQuery, state: FSMContext):
+
+    await call.message.edit_text(
+        text="Введите промокод для активации"
+    )
+    await state.update_data(last_msg_id=call.message.message_id)
+
+
+@router.message(F.text)
+async def get_promocode(message: Message, state: FSMContext):
+    promocode = message.text
+
+    # await message.delete()
+    await del_msg(message, state)
+
+    promocode_info = await PromocodeService.find_one_or_none(code=promocode)
+    if promocode_info:
+        apply_info = await UserService.get_promocode(telegram_id=str(message.from_user.id), code=promocode_info.code)
+
+    if promocode_info and apply_info:
+        text = (
+            f"Промокод успешно применен!\n"
+            f"Ваш баланс пополнен на {promocode_info.bonus}₽"
+        )
+        await message.answer(
+            text=text,
+            reply_markup=home_inline_kb()
+        )
+    else:
+        text = (
+            f"Промокод не найден :(\n"
+            f"Попробуйте ввести другой для активации"
+        )
+        await message.answer(
+            text=text,
+            reply_markup=promocode_inline_kb()
+        )
 
 
 @router.callback_query(F.data == 'get_all_keys')

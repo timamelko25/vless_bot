@@ -8,7 +8,7 @@ from app.config import settings
 
 def home_inline_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text='🏠 Главное меню', callback_data='home')
+    kb.button(text="🏠 Главное меню", callback_data='home')
     kb.adjust(1)
     return kb.as_markup()
 
@@ -62,11 +62,11 @@ def prices_reply_kb() -> ReplyKeyboardMarkup:
 
 def keys_inline_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text='IOS', callback_data='get_info_ios')
-    kb.button(text='Android', callback_data='get_info_android')
-    kb.button(text='MacOS', callback_data='get_info_mac')
-    kb.button(text='Windows', callback_data='get_info_win')
-    kb.button(text='Главное меню', callback_data='home')
+    kb.button(text="IOS", callback_data='get_info_ios')
+    kb.button(text="Android", callback_data='get_info_android')
+    kb.button(text="MacOS", callback_data='get_info_mac')
+    kb.button(text="Windows", callback_data='get_info_win')
+    kb.button(text="Главное меню", callback_data='home')
 
     kb.adjust(2, 2, 1)
     return kb.as_markup()
@@ -80,9 +80,16 @@ def kb_confirm_upd() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def cancel_kb(price: float) -> InlineKeyboardMarkup:
+def cancel_inline_kb(price: float) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text=f"Оплатить {price}₽", pay=True)
     kb.button(text="❌ Отмена", callback_data='home')
+    kb.adjust(1)
+    return kb.as_markup()
+
+def promocode_inline_kb() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Попробовать еще раз", callback_data='promocode')
+    kb.button(text="🏠 Главное меню", callback_data='home')
     kb.adjust(1)
     return kb.as_markup()

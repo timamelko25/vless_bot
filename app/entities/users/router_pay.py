@@ -14,7 +14,7 @@ from app.config import bot, settings
 from app.utils.utils import del_msg
 from app.entities.servers.service import ServerService
 from app.entities.keys.service import KeyService
-from .kb import kb_confirm_upd, home_inline_kb, get_key_inline_kb, cancel_kb
+from .kb import kb_confirm_upd, home_inline_kb, get_key_inline_kb, cancel_inline_kb
 from .schemas import NewUserScheme
 from .service import UserService
 
@@ -92,7 +92,7 @@ async def confirm_add_balance(call: CallbackQuery, state: FSMContext):
                     amount=int(price) * 100
                 )
             ],
-            reply_markup=cancel_kb(price)
+            reply_markup=cancel_inline_kb(price)
         )
 
         await state.update_data(last_msg_id=msg.message_id)
@@ -138,7 +138,7 @@ async def successful_payment(message: Message, state: FSMContext):
         user_refer = await UserService.find_one_or_none(telegram_id=user.refer_id)
         await UserService.update_balance_and_count_refer(
             telegram_id=user_refer.telegram_id,
-            balance=float(balance * 20 / 100)
+            balance=float(balance) * 20 / 100
         )
     else:
         await UserService.update_balance(
@@ -151,12 +151,21 @@ async def successful_payment(message: Message, state: FSMContext):
             username = message.from_user.username
             user_info = f"@{username} ({message.from_user.id})" if username else f"c ID {message.from_user.id}"
 
-            await bot.send_message(
-                chat_id=admin_id,
+            if user.refer_id:
+                text = (
+                    f"💲 Пользователь {user_info} пополнил баланс на {balance}\n"
+                    f"Пользователь реферальной системы получил бонус {float(balance) * 20 / 100}"
+                )
+            else:
                 text=(
                     f"💲 Пользователь {user_info} пополнил баланс на {balance}"
                 )
+                
+            await bot.send_message(
+                chat_id=admin_id,
+                text=text
             )
+            
         except Exception as e:
             logger.error(
                 f"Ошибка при отправке уведомления администраторам: {e}")

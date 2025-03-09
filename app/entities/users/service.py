@@ -8,6 +8,7 @@ from app.entities.keys.models import Key
 from app.service.base import BaseService
 from app.database import connection
 from app.entities.keys.service import KeyService
+from app.entities.promocodes.service import PromocodeService
 from .schemas import KeyScheme
 from .models import User
 
@@ -117,3 +118,20 @@ class UserService(BaseService):
     @connection()
     async def delete_key():
         pass
+
+
+    @classmethod
+    @connection()
+    async def get_promocode(cls, session: AsyncSession, telegram_id: str, code: str):
+        promocode = await PromocodeService.find_one_or_none(code=code)
+        
+        if promocode.count > 0:
+            await cls.update_balance(
+                telegram_id=telegram_id,
+                balance=promocode.bonus
+                )
+            info = await PromocodeService.update_count(code=promocode.code)
+            await session.flush()
+            return info
+        
+        return None
