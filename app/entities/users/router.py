@@ -1,3 +1,4 @@
+import asyncio
 from aiogram import Router, F
 from aiogram.enums import ContentType
 from aiogram.types import Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
@@ -94,7 +95,7 @@ async def profile_command(message: Message, state: FSMContext):
 
     if user is not None:
         await message.answer(
-            text=await PROFILE_TEXT(user.balance, None, user.refer_id),
+            text=await PROFILE_TEXT(user.balance, None, str(message.from_user.id)),
             reply_markup=profile_inline_kb()
         )
 
@@ -110,12 +111,12 @@ async def page_home(call: CallbackQuery):
 
 @router.callback_query(F.data == 'get_profile')
 async def get_user_profile(call: CallbackQuery):
-    # user service find user from_user.id
+
     user = await UserService.find_one_or_none(telegram_id=str(call.from_user.id))
 
     if user is not None:
         await call.message.edit_text(
-            text=await PROFILE_TEXT(user.balance, None, user.refer_id),
+            text=await PROFILE_TEXT(user.balance, None, str(call.from_user.id)),
             reply_markup=profile_inline_kb()
         )
 
@@ -155,7 +156,7 @@ async def get_key(call: CallbackQuery):
         key = await UserService.create_key(telegram_id=str(call.from_user.id), server=server)
 
         logger.info(f"User {user.telegram_id} bought key {key.get('email')}")
-        
+
         text = (
             "🎉 <b>Поздравляю!</b> Вы приобрели ключ!\n\n"
             f"🌍 <b>Страна покупки:</b> <code>{server}</code>\n"
@@ -206,7 +207,6 @@ async def get_balance(message: Message, state: FSMContext):
             return
         await state.update_data(balance=balance)
 
-
         data = await state.get_data()
 
         text = (
@@ -227,70 +227,90 @@ async def get_balance(message: Message, state: FSMContext):
 async def confirm_add_balance(call: CallbackQuery, state: FSMContext):
 
     data = await state.get_data()
-    # await bot.delete_message(chat_id=call.from_user.id, message_id=data['last_msg_id'])
-    # del data['last_msg_id']
 
     user_info = await UserService.find_one_or_none(telegram_id=str(call.from_user.id))
     price = data['balance']
-    # добавить нормальную оплату
-    # await bot.send_invoice(
-    #     chat_id=call.from_user.id,
-    #     title=f'Оплата 👉 {price}₽',
-    #     description=f'Пожалуйста, завершите оплату в размере {price}₽, чтобы открыть доступ к выбранному товару.',
-    #     payload=f"{user_info.id}_{data['balance']}",
-    #     provider_token=settings.PROVIDER_TOKEN,
-    #     currency='rub',
-    #     prices=[LabeledPrice(
-    #         label=f'Оплата {price}',
-    #         amount=int(price) * 100
-    #     )],
-    #     reply_markup=home_inline_kb()
-    # )
 
-    # await call.message.delete
-    invoice = True
-    if invoice:
-        await UserService.update_balance(
-            telegram_id=str(call.from_user.id),
-            balance=data['balance']
+    await call.message.delete()
+
+    msg = await bot.send_invoice(
+        chat_id=call.from_user.id,
+        title=f'Оплата 👉 {price}₽',
+        description=f'Пожалуйста, завершите оплату в размере {price}₽, чтобы пополнить баланс.',
+        payload=f"{user_info.telegram_id}_{data['balance']}",
+        provider_token=settings.PROVIDER_TOKEN,
+        currency='rub',
+        prices=[LabeledPrice(
+            label=f'Оплата {price}',
+            amount=int(price) * 100
+        )],
+        # reply_markup=home_inline_kb()
+    )
+
+    await state.update_data(last_msg_id=msg.message_id)
+
+
+@router.pre_checkout_query(lambda query: True)
+async def pre_checkout_query(pre_checkout_q: PreCheckoutQuery, state: FSMContext):
+    try:
+        await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
+    except Exception as e:
+        logger.error(f"PreCheckout error: {e}")
+        await bot.answer_pre_checkout_query(
+            pre_checkout_q.id,
+            ok=False,
+            error_message="Ошибка при обработке платежа"
         )
 
-        await call.message.edit_text(text="Баланс успешно пополнен!", reply_markup=home_inline_kb())
-
-
-# @router.pre_checkout_query(lambda query: True)
-# async def pre_checkout_query(pre_checkout_q: PreCheckoutQuery):
-#     await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
 
 @router.message(F.content_type == ContentType.SUCCESSFUL_PAYMENT)
-async def successful_payment(message: Message):
+async def successful_payment(message: Message, state: FSMContext):
+
+    await message.delete()
+    await bot.delete_message(chat_id=message.chat.id, message_id=(await state.get_data()).get('last_msg_id'))
+
     payment_info = message.successful_payment
+ 
     user_id, balance = payment_info.invoice_payload.split('_')
+
     payment_data = {
         'user_id': str(user_id),
         'payment_id': payment_info.telegram_payment_charge_id,
         'price': payment_info.total_amount / 100,
-        'balance': int(balance)
+        'balance': float(balance)
     }
+    # добавить оплату в историю payments
 
-    await UserService.update_balance(
-        telegram_id=str(user_id),
-        balance=balance
-    )
+    user = await UserService.find_one_or_none(telegram_id=user_id)
 
-    for admin in settings.ADMINS_LIST:
+    if user.refer_id:
+        user_refer = await UserService.find_one_or_none(telegram_id=user.refer_id)
+        await UserService.update_balance_and_count_refer(
+            telegram_id=user_refer.telegram_id,
+            balance=float(balance * 20 / 100)
+        )
+    else:
+        await UserService.update_balance(
+            telegram_id=user_id,
+            balance=float(balance)
+        )
+
+    for admin_id in settings.ADMINS_LIST:
         try:
             username = message.from_user.username
             user_info = f"@{username} ({message.from_user.id})" if username else f"c ID {message.from_user.id}"
 
-            await bot.send_message(text=(
-                f"💲 Пользователь {user_info} пополнил баланс на {balance}"
-            ))
+            await bot.send_message(
+                chat_id=admin_id,
+                text=(
+                    f"💲 Пользователь {user_info} пополнил баланс на {balance}"
+                )
+            )
         except Exception as e:
             logger.error(
                 f"Ошибка при отправке уведомления администраторам: {e}")
 
-    await message.edit_text(text="Баланс успешно пополнен!", reply_markup=home_inline_kb())
+    await message.answer(text="Баланс успешно пополнен!", reply_markup=home_inline_kb())
 
 
 @router.callback_query(F.data == 'promocode')

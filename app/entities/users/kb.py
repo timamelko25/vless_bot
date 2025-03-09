@@ -27,7 +27,7 @@ def profile_inline_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="💳 Пополнение баланса", callback_data='top_up')
     kb.button(text="🎉 Промокод", callback_data='promocode')
-    kb.button(text="🔑 Все ключи", callback_data='get_all_keys')
+    kb.button(text="🔑 Мои ключи", callback_data='get_all_keys')
     kb.button(text="⬅️ Назад", callback_data='home')
     kb.adjust(1, 2, 1)
     return kb.as_markup()
