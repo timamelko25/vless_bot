@@ -1,10 +1,11 @@
-from app.service.base import BaseService
-from .models import Key
-from app.database import connection
 import uuid
-from .utils import *
+import json
 
+from app.service.base import BaseService
 from app.config import settings
+from app.database import connection
+from .models import Key
+from .utils import get_inbounds, add_client
 
 
 class KeyService(BaseService):
@@ -13,7 +14,6 @@ class KeyService(BaseService):
     # gen key
     @classmethod
     async def generate_key(cls, data):
-
 
         data = {
             "id": data.get('id'),
@@ -37,7 +37,6 @@ class KeyService(BaseService):
         settings_panel = realitySettings.get('settings', {})
         publicKey = settings_panel.get('publicKey')
         fp = settings_panel.get('fingerprint')
-        
 
         key = f"vless://{data.get('id')}@{settings.VLESS_HOST}:443?type={type}&security={security}&pbk={publicKey}&fp={fp}&sni={serverName[0]}&sid={shortIds[0]}&spx=%2F&flow=xtls-rprx-vision#{data.get('email')}"
 
@@ -46,9 +45,8 @@ class KeyService(BaseService):
                 "key_value": key
             }
         )
-        
-        return data
 
+        return data
 
     # upd key
     # del key

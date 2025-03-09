@@ -8,6 +8,7 @@ from loguru import logger
 
 from app.config import settings
 
+
 url_panel = settings.get_vpn_url()
 
 
@@ -88,7 +89,7 @@ async def add_client(data, url=url_panel):
     '''Добавить нового клиента'''
 
     path = '/panel/api/inbounds/addClient'
-    
+
     payload = {
         "id": 1,
         "settings": json.dumps({
@@ -159,4 +160,3 @@ async def update_inbound(session, id, payload, url=url_panel):
     except Exception as e:
         logger.error(f"Error update client inbound {e}")
         return {}
-

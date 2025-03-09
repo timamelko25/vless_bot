@@ -1,16 +1,13 @@
+from loguru import logger
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import CallbackQuery, Message
 
 from app.config import settings, bot
-
-from .kb import admin_kb, admin_kb_confirm_add, admin_kb_server, admin_kb_user, admin_kb_key, admin_cancel_kb, admin_kb_current_key, admin_kb_confirm_upd
 from app.utils.utils import del_msg
-
 from app.entities.keys.utils import add_client, get_inbounds
-
-from loguru import logger
+from .kb import admin_kb, admin_kb_confirm_add, admin_kb_server, admin_kb_user, admin_kb_key, admin_cancel_kb, admin_kb_current_key, admin_kb_confirm_upd
 
 router = Router()
 

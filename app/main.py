@@ -1,15 +1,14 @@
 import asyncio
-from aiogram.types import BotCommand, BotCommandScopeDefault
 
 from loguru import logger
-
+from aiogram.types import BotCommand, BotCommandScopeDefault
 from app.config import bot, dp, admins
-from app.entities.users.router import router as user_router
+from app.entities.users.router_start import router as user_router_start
+from app.entities.users.router_pay import router as user_router_pay
+from app.entities.keys.router_key_get import router as key_router_get
 from app.entities.admin.router import router as admin_router
-
-from sqlalchemy_utils import create_database, database_exists
-
 from app.entities import *
+
 
 async def set_commands():
     commands = [
@@ -42,7 +41,9 @@ async def stop_bot():
 
 async def main():
 
-    dp.include_router(user_router)
+    dp.include_router(user_router_start)
+    dp.include_router(user_router_pay)
+    dp.include_router(key_router_get)
     dp.include_router(admin_router)
 
     dp.startup.register(start_bot)

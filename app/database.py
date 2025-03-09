@@ -1,15 +1,14 @@
+from functools import wraps
+from typing import Annotated
+from datetime import datetime
+
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncAttrs
-from sqlalchemy.exc import SQLAlchemyError, InvalidRequestError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func, text, TIMESTAMP
 from sqlalchemy.orm import declared_attr, DeclarativeBase, Mapped, mapped_column
 
-from functools import wraps
-
-from typing import Optional, Annotated
-
-from datetime import datetime
-
 from .config import PG_URL
+
 
 int_pk = Annotated[int, mapped_column(primary_key=True, autoincrement=True)]
 

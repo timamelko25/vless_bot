@@ -1,6 +1,8 @@
 from typing import Dict
-from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
 from .models import User
 
 
@@ -19,4 +21,3 @@ class KeyScheme(BaseModel):
     email: str
     value: str
     expires_at: str
-

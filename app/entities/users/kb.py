@@ -1,6 +1,8 @@
 from typing import List
+
 from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
+
 from app.config import settings
 
 
@@ -73,6 +75,14 @@ def keys_inline_kb() -> InlineKeyboardMarkup:
 def kb_confirm_upd() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="✅ Подтвердить", callback_data='confirm_add_balance')
+    kb.button(text="❌ Отмена", callback_data='home')
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def cancel_kb(price: float) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text=f"Оплатить {price}₽", pay=True)
     kb.button(text="❌ Отмена", callback_data='home')
     kb.adjust(1)
     return kb.as_markup()

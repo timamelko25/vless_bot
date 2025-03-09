@@ -1,14 +1,15 @@
 import uuid
-from app.entities.keys.models import Key
-from app.service.base import BaseService
-from .models import User
+from datetime import datetime, timedelta, timezone
+
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.entities.keys.models import Key
+from app.service.base import BaseService
 from app.database import connection
-from loguru import logger
-from datetime import datetime, timedelta, timezone
 from app.entities.keys.service import KeyService
 from .schemas import KeyScheme
+from .models import User
 
 
 class UserService(BaseService):

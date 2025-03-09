@@ -1,10 +1,10 @@
-from app.database import Base
+from datetime import datetime
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import class_mapper
-from datetime import datetime
 
-
+from app.database import Base
 
 
 class Key(Base):
@@ -29,7 +29,7 @@ class Key(Base):
     expires_at: Mapped[str] = mapped_column(nullable=False)
 
     extend_existing = True
-    
+
     def to_dict(self) -> dict:
         columns = class_mapper(self.__class__).columns
         return {column.key: getattr(self, column.key) for column in columns}
