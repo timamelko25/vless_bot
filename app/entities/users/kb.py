@@ -80,9 +80,15 @@ def kb_confirm_upd() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def cancel_inline_kb(price: float) -> InlineKeyboardMarkup:
+def payment_inline_kb(price: float) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text=f"Оплатить {price}₽", pay=True)
+    kb.button(text="❌ Отмена", callback_data='home')
+    kb.adjust(1)
+    return kb.as_markup()
+
+def cancel_inline_kb() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
     kb.button(text="❌ Отмена", callback_data='home')
     kb.adjust(1)
     return kb.as_markup()

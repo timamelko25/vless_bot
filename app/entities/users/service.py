@@ -1,3 +1,4 @@
+from typing import List
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -81,7 +82,7 @@ class UserService(BaseService):
                 "id": str(uuid.uuid4()),
                 "email": str(uuid.uuid4()).replace('-', '')[:10],
                 "limitIp": 3,
-                "totalGB": 107374182400, # 100gb ti bits
+                "totalGB": 107374182400, # 100gb in bits
                 # для пробного + 3 сделать
                 "expiryTime": str(date),
             }
@@ -118,6 +119,18 @@ class UserService(BaseService):
     @connection()
     async def delete_key():
         pass
+    
+    @classmethod
+    @connection()
+    async def get_all_keys(cls, session: AsyncSession, telegram_id: str) -> List:
+        user = await cls.find_one_or_none(telegram_id=telegram_id)
+        
+        if not user:
+            logger.error(
+                f"User {telegram_id} not found while getting keys")
+            
+        await session.flush()
+        return user.keys
 
 
     @classmethod
@@ -134,4 +147,17 @@ class UserService(BaseService):
             await session.flush()
             return info
         
+        return None
+    
+    @classmethod
+    @connection()
+    async def find_min_date_expire(cls, session: AsyncSession, telegram_id: str):
+        keys = await cls.get_all_keys(telegram_id=telegram_id)
+        if keys:
+            date = 10000000000000
+            for key in keys:
+                date = min(int(key.expires_at), date)
+                
+            date = datetime.fromtimestamp(date / 1000, tz=timezone.utc).strftime('%Y-%m-%d')
+            return date
         return None

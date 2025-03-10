@@ -1,3 +1,4 @@
+from typing import Dict
 import uuid
 import json
 
@@ -5,7 +6,7 @@ from app.service.base import BaseService
 from app.config import settings
 from app.database import connection
 from .models import Key
-from .utils import get_inbounds, add_client
+from .panel_api import get_inbounds, add_client
 
 
 class KeyService(BaseService):
@@ -13,7 +14,7 @@ class KeyService(BaseService):
 
     # gen key
     @classmethod
-    async def generate_key(cls, data):
+    async def generate_key(cls, data) -> Dict:
 
         data = {
             "id": data.get('id'),

@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
 from loguru import logger
 from aiogram import Router, F
@@ -44,11 +44,14 @@ async def get_key(call: CallbackQuery):
         key = await UserService.create_key(telegram_id=str(call.from_user.id), server=server)
 
         logger.info(f"User {user.telegram_id} bought key {key.get('email')}")
-
+        
+        date = int(key.get('expires_at'))
+        date = datetime.fromtimestamp(date / 1000, tz=timezone.utc).strftime('%Y-%m-%d')
+        
         text = (
             "🎉 <b>Поздравляю!</b> Вы приобрели ключ!\n\n"
             f"🌍 <b>Страна покупки:</b> <code>{server}</code>\n"
-            f"📅 <b>Срок действия:</b> <code>{key.get('expiryTime')}</code>\n\n"
+            f"📅 <b>Срок действия:</b> <code>{date}</code>\n\n"
             "🔑 <b>Ваш ключ:</b>\n"
             f"<code>{key.get('value')}</code>\n\n"
             "📜 Для активации воспользуйтесь прикрепленной инструкцией."

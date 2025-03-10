@@ -25,7 +25,7 @@ def admin_kb_user() -> InlineKeyboardMarkup:
 
 def admin_kb_server() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="➕ Добавить сервер", callback_data='add_server')
+    kb.button(text="➕ Добавить сервер", callback_data='add_server_admin')
     kb.button(text="🗑 Удалить сервер", callback_data='del_server')
     kb.button(text="⚙️ Панель администратора", callback_data='admin_panel')
     kb.button(text="🏠 Главная страница", callback_data='home')
@@ -35,8 +35,8 @@ def admin_kb_server() -> InlineKeyboardMarkup:
 
 def admin_kb_key() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="🔑 Получить все ключи", callback_data='get_all_keys')
-    kb.button(text="🔑 Сгенерировать ключ", callback_data='generate_key')
+    kb.button(text="🔑 Получить все ключи", callback_data='get_all_keys_admin')
+    kb.button(text="🔑 Сгенерировать ключ", callback_data='generate_key_admin')
     kb.button(text="⚙️ Панель администратора", callback_data='admin_panel')
     kb.button(text="🏠 Главная страница", callback_data='home')
     kb.adjust(1)
@@ -44,24 +44,31 @@ def admin_kb_key() -> InlineKeyboardMarkup:
 
 def admin_kb_current_key() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="🗑 Удалить ключ", callback_data='del_key')
-    kb.button(text="✏️ Редактировать ключ", callback_data='edit_key')
+    kb.button(text="🗑 Удалить ключ", callback_data='del_key_admin')
+    kb.button(text="✏️ Редактировать ключ", callback_data='edit_key_admin')
     kb.button(text="⚙️ Панель администратора", callback_data='admin_panel')
     kb.button(text="🏠 Главная страница", callback_data='home')
     kb.adjust(2)
     return kb.as_markup()
 
 
-def admin_kb_confirm_add() -> InlineKeyboardMarkup:
+def admin_kb_confirm_add_key() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="✅ Подтвердить", callback_data='confirm_add')
+    kb.button(text="✅ Подтвердить", callback_data='confirm_add_key')
     kb.button(text="❌ Отмена", callback_data='admin_panel')
     kb.adjust(1)
     return kb.as_markup()
 
-def admin_kb_confirm_upd() -> InlineKeyboardMarkup:
+def admin_kb_confirm_add_server() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="✅ Подтвердить", callback_data='confirm_upd')
+    kb.button(text="✅ Подтвердить", callback_data='confirm_add_server')
+    kb.button(text="❌ Отмена", callback_data='admin_panel')
+    kb.adjust(1)
+    return kb.as_markup()
+
+def admin_kb_confirm_upd_balance() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✅ Подтвердить", callback_data='confirm_upd_balance')
     kb.button(text="❌ Отмена", callback_data='admin_panel')
     kb.adjust(1)
     return kb.as_markup()

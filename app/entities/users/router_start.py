@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
 from loguru import logger
 from aiogram import Router, F
@@ -38,14 +38,14 @@ async def HOME_TEXT() -> str:
     )
 
 
-async def PROFILE_TEXT(balance: float, date_expire: datetime | None, refer_id: str) -> str:
+async def PROFILE_TEXT(balance: float, date_expire: str, refer_id: str) -> str:
     return (
         f" <b>💼 Личный кабинет</b>\n\n"
         f" <b>💰 Баланс:</b> <i>{balance}</i>\n"
-        f" <b>📅 Ближайшая дата списания:</b> <i>{date_expire}</i>\n"
+        f" <b>📅 Ближайшая дата списания:</b> <i>{date_expire}</i>\n\n"
         f" <b>🔗 Ваша реферальная ссылка:</b>\n"
         f" <code>https://t.me/vless_tgbot?start={refer_id} </code>\n\n"
-        f" ✨ Используйте реферальную систему, чтобы получить бонусы!"
+        f" ✨ Используйте реферальную систему, чтобы получать <b>20%</b> от пополнений приведенного друга!\n"
     )
 
 
@@ -85,12 +85,17 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext)
 @router.message(Command('profile'))
 async def profile_command(message: Message, state: FSMContext):
     await state.clear()
+    tg_id = str(message.from_user.id)
+    user = await UserService.find_one_or_none(telegram_id=tg_id)
+    date = await UserService.find_min_date_expire(telegram_id=tg_id)
+    balance = round(user.balance, 2)
 
-    user = await UserService.find_one_or_none(telegram_id=str(message.from_user.id))
+    if date is None:
+        date = "Нет купленных ключей"
 
     if user is not None:
         await message.answer(
-            text=await PROFILE_TEXT(user.balance, None, str(message.from_user.id)),
+            text=await PROFILE_TEXT(balance, date, str(message.from_user.id)),
             reply_markup=profile_inline_kb()
         )
 
@@ -106,12 +111,17 @@ async def page_home(call: CallbackQuery):
 
 @router.callback_query(F.data == 'get_profile')
 async def get_user_profile(call: CallbackQuery):
+    tg_id = str(call.from_user.id)
+    user = await UserService.find_one_or_none(telegram_id=tg_id)
+    date = await UserService.find_min_date_expire(telegram_id=tg_id)
+    balance = round(user.balance, 2)
 
-    user = await UserService.find_one_or_none(telegram_id=str(call.from_user.id))
+    if date is None:
+        date = "Нет купленных ключей"
 
     if user is not None:
         await call.message.edit_text(
-            text=await PROFILE_TEXT(user.balance, None, str(call.from_user.id)),
+            text=await PROFILE_TEXT(balance, date, str(call.from_user.id)),
             reply_markup=profile_inline_kb()
         )
 
@@ -136,7 +146,7 @@ async def start_promocode(call: CallbackQuery, state: FSMContext):
     await state.update_data(last_msg_id=call.message.message_id)
 
 
-@router.message(F.text)
+@router.message(F.text, StateFilter(None))
 async def get_promocode(message: Message, state: FSMContext):
     promocode = message.text
 
@@ -169,4 +179,27 @@ async def get_promocode(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == 'get_all_keys')
 async def get_all_user_keys(call: CallbackQuery):
-    pass
+    user_keys = await UserService.get_all_keys(telegram_id=str(call.from_user.id))
+
+    text = (
+        f"Все ваши купленные ключи\n\n"
+    )
+
+    for key in user_keys:
+        server = await ServerService.find_one_or_none(id=key.server_id)
+        date = int(key.expires_at)
+        date = datetime.fromtimestamp(
+            date / 1000, tz=timezone.utc).strftime('%Y-%m-%d')
+        text += (
+            f"Время действия ключа <code>{date}</code>\n"
+            f"Страна действия: <b>{server.name_in_bot}</b>\n"
+            f"Ваш ключ:\n"
+            f"<code>{key.value}</code>\n\n"
+        )
+
+    text += f"📜 Для активации воспользуйтесь прикрепленной инструкцией."
+
+    await call.message.edit_text(
+        text=text,
+        reply_markup=keys_inline_kb()
+    )

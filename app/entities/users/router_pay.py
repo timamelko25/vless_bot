@@ -13,8 +13,9 @@ from aiogram.filters import StateFilter
 from app.config import bot, settings
 from app.utils.utils import del_msg
 from app.entities.servers.service import ServerService
+from app.entities.payments.service import PaymentService
 from app.entities.keys.service import KeyService
-from .kb import kb_confirm_upd, home_inline_kb, get_key_inline_kb, cancel_inline_kb
+from .kb import kb_confirm_upd, home_inline_kb, get_key_inline_kb, cancel_inline_kb, payment_inline_kb
 from .schemas import NewUserScheme
 from .service import UserService
 
@@ -43,11 +44,27 @@ async def update_user_balance(call: CallbackQuery, state: FSMContext):
 async def get_balance(message: Message, state: FSMContext):
     try:
         balance = float(message.text.replace(',', '.').strip())
-        if balance < 10:
-            await message.answer("Ошибка. Минимальная сумма пополнения 10")
+        if balance < 80:
+            await del_msg(message, state)
+            msg = await message.answer(
+                text=(
+                    f"Ошибка. Минимальная сумма пополнения 80\n"
+                    f"Введите корректную сумму для пополнения"
+                ),
+                reply_markup=cancel_inline_kb()
+            )
+            await state.update_data(last_msg_id=msg.message_id)
             return
         elif balance > 10000:
-            await message.answer("Ошибка. Максимальная сумма пополнения 10000!")
+            await del_msg(message, state)
+            msg = await message.answer(
+                text=(
+                    f"Ошибка. Максимальная сумма пополнения 10000!\n"
+                    f"Введите корректную сумму для пополнения"
+                ),
+                reply_markup=cancel_inline_kb()
+            )
+            await state.update_data(last_msg_id=msg.message_id)
             return
         await state.update_data(balance=balance)
 
@@ -81,9 +98,9 @@ async def confirm_add_balance(call: CallbackQuery, state: FSMContext):
             chat_id=call.from_user.id,
             title=f'Оплата 👉 {price}₽',
             description=f'Пожалуйста, завершите оплату в размере {price}₽, чтобы пополнить баланс.',
-            payload=f"{user_info.telegram_id}_{data['balance']}",
+            payload=f"{user_info.id}_{data['balance']}",
             provider_token=settings.PROVIDER_TOKEN,
-            currency='rub',
+            currency='RUB',
             need_phone_number=True,
             send_phone_number_to_provider=True,
             prices=[
@@ -92,7 +109,7 @@ async def confirm_add_balance(call: CallbackQuery, state: FSMContext):
                     amount=int(price) * 100
                 )
             ],
-            reply_markup=cancel_inline_kb(price)
+            reply_markup=payment_inline_kb(price)
         )
 
         await state.update_data(last_msg_id=msg.message_id)
@@ -103,7 +120,20 @@ async def confirm_add_balance(call: CallbackQuery, state: FSMContext):
 @router.pre_checkout_query(lambda query: True)
 async def pre_checkout_query(pre_checkout_q: PreCheckoutQuery, state: FSMContext):
     try:
+        data = await state.get_data()
+        expected_amount = int(data['balance'] * 100)
+
+        if pre_checkout_q.total_amount != expected_amount:
+            await bot.answer_pre_checkout_query(
+                pre_checkout_q.id,
+                ok=False,
+                error_message="Неверная сумма платежа",
+                error_code="CURRENCY_TOTAL_AMOUNT_INVALID"
+            )
+            return
+
         await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
+
     except Exception as e:
         logger.error(f"PreCheckout error: {e}")
         await bot.answer_pre_checkout_query(
@@ -124,15 +154,14 @@ async def successful_payment(message: Message, state: FSMContext):
     user_id, balance = payment_info.invoice_payload.split('_')
 
     payment_data = {
-        'user_id': str(user_id),
+        'user_id': int(user_id),
         'payment_id': payment_info.telegram_payment_charge_id,
-        'price': payment_info.total_amount / 100,
-        'balance': float(balance)
+        'sum': payment_info.total_amount / 100,
     }
 
-    # добавить оплату в историю payments
+    user = await UserService.find_one_or_none(id=int(user_id))
 
-    user = await UserService.find_one_or_none(telegram_id=user_id)
+    await PaymentService.add_payment_in_history(data=payment_data)
 
     if user.refer_id:
         user_refer = await UserService.find_one_or_none(telegram_id=user.refer_id)
@@ -140,9 +169,13 @@ async def successful_payment(message: Message, state: FSMContext):
             telegram_id=user_refer.telegram_id,
             balance=float(balance) * 20 / 100
         )
+        await UserService.update_balance(
+            telegram_id=user.telegram_id,
+            balance=float(balance)
+        )
     else:
         await UserService.update_balance(
-            telegram_id=user_id,
+            telegram_id=user.telegram_id,
             balance=float(balance)
         )
 
@@ -157,15 +190,15 @@ async def successful_payment(message: Message, state: FSMContext):
                     f"Пользователь реферальной системы получил бонус {float(balance) * 20 / 100}"
                 )
             else:
-                text=(
+                text = (
                     f"💲 Пользователь {user_info} пополнил баланс на {balance}"
                 )
-                
+
             await bot.send_message(
                 chat_id=admin_id,
                 text=text
             )
-            
+
         except Exception as e:
             logger.error(
                 f"Ошибка при отправке уведомления администраторам: {e}")
@@ -176,6 +209,7 @@ async def successful_payment(message: Message, state: FSMContext):
 
 @router.message(StateFilter(AddBalance.buying))
 async def unsuccessful_payment(message: Message, state: FSMContext):
+    await del_msg(message, state)
     await message.answer(
         text="Не удалось выполнить платеж!",
         reply_markup=get_key_inline_kb()
