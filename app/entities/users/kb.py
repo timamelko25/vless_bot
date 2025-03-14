@@ -4,6 +4,7 @@ from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from app.config import settings
+from app.entities.users.service import UserService
 
 
 def home_inline_kb() -> InlineKeyboardMarkup:
@@ -43,10 +44,18 @@ def get_key_inline_kb() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+def gen_key_inline_kb() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Получить ключ", callback_data='start_getting_key')
+    kb.button(text="Главное меню", callback_data='home')
+    kb.adjust(1)
+    return kb.as_markup()
+
+
 def servers_inline_kb(servers: List) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for server in servers:
-        kb.button(text=f'🌐 {server}', callback_data='get_key')
+        kb.button(text=f'🌐 {server}', callback_data=f'get_key_confirm:{server}')
     kb.button(text='🏠 Главное меню', callback_data='home')
     kb.adjust(1)
     return kb.as_markup()
@@ -80,6 +89,16 @@ def kb_confirm_upd() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+def kb_confirm_get_key(balance: float) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✅ Подтвердить", callback_data='get_key')
+    if balance < 150:
+        kb.button(text="💳 Пополнение баланса", callback_data='top_up')
+    kb.button(text="Главное меню", callback_data='home')
+    kb.adjust(1)
+    return kb.as_markup()
+
+
 def payment_inline_kb(price: float) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text=f"Оплатить {price}₽", pay=True)
@@ -87,11 +106,13 @@ def payment_inline_kb(price: float) -> InlineKeyboardMarkup:
     kb.adjust(1)
     return kb.as_markup()
 
+
 def cancel_inline_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="❌ Отмена", callback_data='home')
     kb.adjust(1)
     return kb.as_markup()
+
 
 def promocode_inline_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()

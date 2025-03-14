@@ -22,3 +22,14 @@ class PromocodeService(BaseService):
         
         await session.flush()
         return info
+    
+    
+    @classmethod
+    @connection()
+    async def generate_promocode(cls, session: AsyncSession, data: dict):
+        info = await cls.add(
+            **data
+            )
+        
+        await session.flush()
+        return info

@@ -30,10 +30,6 @@ class Settings(BaseSettings):
     REDIS_PORT: int
     REDIS_DB: int
 
-    VLESS_HOST: str
-    VLESS_PORT: int
-    VLESS_WEBBASEPATH: str
-
     VLESS_USERNAME: str
     VLESS_PASSWORD: str
 
@@ -52,11 +48,6 @@ class Settings(BaseSettings):
         return (
             f"redis://{self.REDIS_USER}:{self.REDIS_PASSWORD}@"
             f"{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
-        )
-
-    def get_vpn_url(self):
-        return (
-            f"https://{self.VLESS_HOST}:{self.VLESS_PORT}/{self.VLESS_WEBBASEPATH}"
         )
 
 

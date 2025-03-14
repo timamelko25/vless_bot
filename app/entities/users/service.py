@@ -6,6 +6,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.entities.keys.models import Key
+from app.entities.servers.service import ServerService
 from app.service.base import BaseService
 from app.database import connection
 from app.entities.keys.service import KeyService
@@ -71,7 +72,7 @@ class UserService(BaseService):
     @connection()
     async def create_key(cls, session: AsyncSession, telegram_id: str, server: str, data: dict = None) -> dict:
         user = await cls.find_one_or_none(telegram_id=telegram_id)
-
+        server = await ServerService.find_one_or_none(name=server)
         if data is None:
             # получение времени по UNIX timestamp (с 1970 года) в миллисекундах
             current_time = datetime.now(timezone.utc)
@@ -87,16 +88,18 @@ class UserService(BaseService):
                 "expiryTime": str(date),
             }
 
-        info = await KeyService.generate_key(data)
+        info = await KeyService.generate_key(data, server)
 
         new_key = Key(
             user_id=str(user.id),
-            server_id=1,
+            server_id=info.get('server_id'),
             user=user,
+            server=server,
             id_panel=info.get('id'),
             value=info.get('key_value'),
             expires_at=info.get('expiryTime'),
-            email=info.get('email')
+            email=info.get('email'),
+            status=True
         )
 
         user.keys.append(new_key)

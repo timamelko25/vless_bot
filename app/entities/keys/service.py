@@ -2,6 +2,7 @@ from typing import Dict
 import uuid
 import json
 
+from app.entities.servers.service import ServerService
 from app.service.base import BaseService
 from app.config import settings
 from app.database import connection
@@ -14,7 +15,8 @@ class KeyService(BaseService):
 
     # gen key
     @classmethod
-    async def generate_key(cls, data) -> Dict:
+    async def generate_key(cls, data, server) -> Dict:
+        # server = await ServerService.find_one_or_none(name=server)
 
         data = {
             "id": data.get('id'),
@@ -24,12 +26,14 @@ class KeyService(BaseService):
             "expiryTime": data.get('expiryTime'),
         }
 
-        info = await get_inbounds()
-        client = await add_client(data)
+        info = await get_inbounds(url=server.domain)
+        client = await add_client(data, url=server.domain)
 
         key = info.get('obj')
         stream_settings = key[0].get('streamSettings', {})
         stream_settings = json.loads(stream_settings)
+        externalProxy = stream_settings.get('externalProxy')
+        dest = externalProxy[0].get('dest')
         type = stream_settings.get('network')
         security = stream_settings.get('security')
         realitySettings = stream_settings.get('realitySettings', {})
@@ -39,11 +43,12 @@ class KeyService(BaseService):
         publicKey = settings_panel.get('publicKey')
         fp = settings_panel.get('fingerprint')
 
-        key = f"vless://{data.get('id')}@{settings.VLESS_HOST}:443?type={type}&security={security}&pbk={publicKey}&fp={fp}&sni={serverName[0]}&sid={shortIds[0]}&spx=%2F&flow=xtls-rprx-vision#{data.get('email')}"
+        key = f"vless://{data.get('id')}@{dest}:443?type={type}&security={security}&pbk={publicKey}&fp={fp}&sni={serverName[0]}&sid={shortIds[0]}&spx=%2F&flow=xtls-rprx-vision#{data.get('email')}"
 
         data.update(
             {
-                "key_value": key
+                "key_value": key,
+                "server_id": server.id
             }
         )
 

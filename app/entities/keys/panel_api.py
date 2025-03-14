@@ -9,10 +9,7 @@ from loguru import logger
 from app.config import settings
 
 
-url_panel = settings.get_vpn_url()
-
-
-async def open_session(url=url_panel):
+async def open_session(url):
     '''Открыть сессию с панелью для запросов'''
 
     data = {
@@ -20,7 +17,7 @@ async def open_session(url=url_panel):
         "password": settings.VLESS_PASSWORD
     }
 
-    path = '/login'
+    path = 'login'
     session = aiohttp.ClientSession()
 
     try:
@@ -38,12 +35,12 @@ async def open_session(url=url_panel):
         return {}
 
 
-async def get_inbounds(url=url_panel) -> dict:
+async def get_inbounds(url) -> dict:
     '''Получить список всех подключений по протоколам'''
 
-    path = '/panel/api/inbounds/list'
+    path = 'panel/api/inbounds/list'
 
-    session, cookies = await open_session()
+    session, cookies = await open_session(url)
     if session is None:
         return {}
 
@@ -85,10 +82,10 @@ async def get_inbounds(url=url_panel) -> dict:
 #         return {}
 
 
-async def add_client(data, url=url_panel):
+async def add_client(data, url):
     '''Добавить нового клиента'''
 
-    path = '/panel/api/inbounds/addClient'
+    path = 'panel/api/inbounds/addClient'
 
     payload = {
         "id": 1,
@@ -114,7 +111,7 @@ async def add_client(data, url=url_panel):
         'Accept': 'application/json'
     }
 
-    session, cookies = await open_session()
+    session, cookies = await open_session(url)
     if session is None:
         return {}
 
@@ -135,10 +132,10 @@ async def add_client(data, url=url_panel):
         return {}
 
 
-async def update_inbound(session, id, payload, url=url_panel):
+async def update_inbound(session, id, payload, url):
     '''Обновить информацию о пользователе по ID'''
 
-    path = '/panel/api/inbounds/updateClient/'
+    path = 'panel/api/inbounds/updateClient/'
 
     headers = {
         'Accept': 'application/json'

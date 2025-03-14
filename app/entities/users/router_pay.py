@@ -15,7 +15,8 @@ from app.utils.utils import del_msg
 from app.entities.servers.service import ServerService
 from app.entities.payments.service import PaymentService
 from app.entities.keys.service import KeyService
-from .kb import kb_confirm_upd, home_inline_kb, get_key_inline_kb, cancel_inline_kb, payment_inline_kb
+from app.entities.keys.router_key_get import get_servers
+from .kb import gen_key_inline_kb, kb_confirm_upd, home_inline_kb, get_key_inline_kb, cancel_inline_kb, payment_inline_kb
 from .schemas import NewUserScheme
 from .service import UserService
 
@@ -33,7 +34,9 @@ class AddBalance(StatesGroup):
 async def update_user_balance(call: CallbackQuery, state: FSMContext):
 
     msg = await call.message.edit_text(
-        f"Введите сумму для пополнения"
+        f"Введите сумму для пополнения\n\n"
+        f"Минимальная сумма пополнения 80\n"
+        f"Максимальная сумма пополнения 10000"
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -96,7 +99,7 @@ async def confirm_add_balance(call: CallbackQuery, state: FSMContext):
         await state.set_state(AddBalance.buying)
         msg = await bot.send_invoice(
             chat_id=call.from_user.id,
-            title=f'Оплата 👉 {price}₽',
+            title=f'Оплата {price}₽',
             description=f'Пожалуйста, завершите оплату в размере {price}₽, чтобы пополнить баланс.',
             payload=f"{user_info.id}_{data['balance']}",
             provider_token=settings.PROVIDER_TOKEN,
@@ -115,23 +118,12 @@ async def confirm_add_balance(call: CallbackQuery, state: FSMContext):
         await state.update_data(last_msg_id=msg.message_id)
     except Exception as e:
         logger.error(f"Ошибка при отправке счета на оплату {e}")
+        return
 
 
 @router.pre_checkout_query(lambda query: True)
 async def pre_checkout_query(pre_checkout_q: PreCheckoutQuery, state: FSMContext):
     try:
-        data = await state.get_data()
-        expected_amount = int(data['balance'] * 100)
-
-        if pre_checkout_q.total_amount != expected_amount:
-            await bot.answer_pre_checkout_query(
-                pre_checkout_q.id,
-                ok=False,
-                error_message="Неверная сумма платежа",
-                error_code="CURRENCY_TOTAL_AMOUNT_INVALID"
-            )
-            return
-
         await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
 
     except Exception as e:
@@ -141,70 +133,74 @@ async def pre_checkout_query(pre_checkout_q: PreCheckoutQuery, state: FSMContext
             ok=False,
             error_message="Ошибка при обработке платежа"
         )
+        return
 
 
 @router.message(F.successful_payment)
 async def successful_payment(message: Message, state: FSMContext):
 
-    await message.delete()
-    await bot.delete_message(chat_id=message.chat.id, message_id=(await state.get_data()).get('last_msg_id'))
+    # await message.delete()
+    # await bot.delete_message(chat_id=message.chat.id, message_id=(await state.get_data()).get('last_msg_id'))
+    try:
+        await del_msg(message, state)
 
-    payment_info = message.successful_payment
+        payment_info = message.successful_payment
 
-    user_id, balance = payment_info.invoice_payload.split('_')
+        user_id, balance = payment_info.invoice_payload.split('_')
 
-    payment_data = {
-        'user_id': int(user_id),
-        'payment_id': payment_info.telegram_payment_charge_id,
-        'sum': payment_info.total_amount / 100,
-    }
+        payment_data = {
+            'user_id': int(user_id),
+            'payment_id': payment_info.telegram_payment_charge_id,
+            'sum': payment_info.total_amount / 100,
+        }
 
-    user = await UserService.find_one_or_none(id=int(user_id))
+        user = await UserService.find_one_or_none(id=int(user_id))
 
-    await PaymentService.add_payment_in_history(data=payment_data)
+        await PaymentService.add_payment_in_history(data=payment_data)
 
-    if user.refer_id:
-        user_refer = await UserService.find_one_or_none(telegram_id=user.refer_id)
-        await UserService.update_balance_and_count_refer(
-            telegram_id=user_refer.telegram_id,
-            balance=float(balance) * 20 / 100
-        )
-        await UserService.update_balance(
-            telegram_id=user.telegram_id,
-            balance=float(balance)
-        )
-    else:
-        await UserService.update_balance(
-            telegram_id=user.telegram_id,
-            balance=float(balance)
-        )
-
-    for admin_id in settings.ADMINS_LIST:
-        try:
-            username = message.from_user.username
-            user_info = f"@{username} ({message.from_user.id})" if username else f"c ID {message.from_user.id}"
-
-            if user.refer_id:
-                text = (
-                    f"💲 Пользователь {user_info} пополнил баланс на {balance}\n"
-                    f"Пользователь реферальной системы получил бонус {float(balance) * 20 / 100}"
-                )
-            else:
-                text = (
-                    f"💲 Пользователь {user_info} пополнил баланс на {balance}"
-                )
-
-            await bot.send_message(
-                chat_id=admin_id,
-                text=text
+        if user.refer_id:
+            user_refer = await UserService.find_one_or_none(telegram_id=user.refer_id)
+            await UserService.update_balance_and_count_refer(
+                telegram_id=user_refer.telegram_id,
+                balance=float(balance) * 20 / 100
+            )
+            await UserService.update_balance(
+                telegram_id=user.telegram_id,
+                balance=float(balance)
+            )
+        else:
+            await UserService.update_balance(
+                telegram_id=user.telegram_id,
+                balance=float(balance)
             )
 
-        except Exception as e:
-            logger.error(
-                f"Ошибка при отправке уведомления администраторам: {e}")
+        user_info = f"@{user.username} ({message.from_user.id})" if user.username else f"c ID {message.from_user.id}"
 
-    logger.info(f"Пользователь {user_info} пополнил баланс на {balance}")
-    await message.answer(text="Баланс успешно пополнен!", reply_markup=home_inline_kb())
+        for admin_id in settings.ADMINS_LIST:
+            try:
+                if user.refer_id:
+                    text = (
+                        f"💲 Пользователь {user_info} пополнил баланс на {balance}\n"
+                        f"Пользователь реферальной системы получил бонус {float(balance) * 20 / 100}"
+                    )
+                else:
+                    text = (
+                        f"💲 Пользователь {user_info} пополнил баланс на {balance}"
+                    )
+
+                await bot.send_message(
+                    chat_id=admin_id,
+                    text=text
+                )
+
+            except Exception as e:
+                logger.error(
+                    f"Ошибка при отправке уведомления администраторам: {e}")
+
+        logger.info(f"Пользователь {user_info} пополнил баланс на {balance}")
+        await message.answer(text="Баланс успешно пополнен!", reply_markup=gen_key_inline_kb())
+    except Exception as e:
+        logger.error("Ошибка при пополнении баланса после получения оплаты")
 
 
 @router.message(StateFilter(AddBalance.buying))

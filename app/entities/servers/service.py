@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.service.base import BaseService
@@ -10,10 +12,8 @@ class ServerService(BaseService):
 
     @classmethod
     @connection()
-    async def get_servers_list(cls, session: AsyncSession):
+    async def get_servers_list(cls, session: AsyncSession) -> List[str]:
         servers = await cls.find_all()
-        info = []
-        for server in servers:
-            info.append(server.name_in_bot)
+        info = [server.name for server in servers]
 
         return info

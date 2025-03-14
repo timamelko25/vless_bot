@@ -27,6 +27,7 @@ class Key(Base):
     email: Mapped[str]
     value: Mapped[str] = mapped_column(nullable=False)
     expires_at: Mapped[str] = mapped_column(nullable=False)
+    status: Mapped[bool] = mapped_column(default=True)
 
     extend_existing = True
 

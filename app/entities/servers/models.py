@@ -11,7 +11,7 @@ class Server(Base):
     __tablename__ = 'servers'
 
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
-    name_in_bot: Mapped[str] = mapped_column(unique=True, nullable=False)
+    domain: Mapped[str] = mapped_column(unique=True, nullable=False)
     description: Mapped[str] = mapped_column(nullable=True)
 
     keys: Mapped[List["Key"]] = relationship(

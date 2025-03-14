@@ -12,4 +12,4 @@ RUN apk add --no-cache bash && \
 
 COPY . /app/
 
-CMD ["bash", "-c", "python app/main.py"]
+CMD ["bash", "-c", "alembic upgrade head && python app/main.py"]

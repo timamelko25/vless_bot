@@ -72,7 +72,8 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext)
         if user_info.refer_id:
             await UserService.update_count_refer(telegram_id=user_info.refer_id)
             logger.info(
-                f"New user reg with ref system {user_info.model_dump()}")
+                f"New user reg with ref system {user_info.model_dump()}"
+            )
         else:
             logger.info(f"New user reg {user_info.model_dump()}")
 
@@ -102,8 +103,8 @@ async def profile_command(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == 'home')
 async def page_home(call: CallbackQuery):
-    await call.message.delete()
-    await call.message.answer(
+    # await call.message.delete()
+    await call.message.edit_text(
         text=await HOME_TEXT(),
         reply_markup=main_inline_kb(call.from_user.id)
     )
@@ -121,36 +122,33 @@ async def get_user_profile(call: CallbackQuery):
 
     if user is not None:
         await call.message.edit_text(
-            text=await PROFILE_TEXT(balance, date, str(call.from_user.id)),
+            text=await PROFILE_TEXT(balance, date, tg_id),
             reply_markup=profile_inline_kb()
         )
 
 
 @router.callback_query(F.data == 'get_help')
 async def get_help_for_key(call: CallbackQuery):
-
     await call.message.edit_text(
-        text=(
-            f"Инструкции для установки ключей"
-        ),
+        text=("Инструкции для установки ключей"),
         reply_markup=keys_inline_kb()
     )
 
 
 @router.callback_query(F.data == 'promocode')
 async def start_promocode(call: CallbackQuery, state: FSMContext):
-
+    await state.clear()
     await call.message.edit_text(
         text="Введите промокод для активации"
     )
     await state.update_data(last_msg_id=call.message.message_id)
+    await state.set_state()
 
 
 @router.message(F.text, StateFilter(None))
 async def get_promocode(message: Message, state: FSMContext):
     promocode = message.text
 
-    # await message.delete()
     await del_msg(message, state)
 
     promocode_info = await PromocodeService.find_one_or_none(code=promocode)
@@ -181,25 +179,31 @@ async def get_promocode(message: Message, state: FSMContext):
 async def get_all_user_keys(call: CallbackQuery):
     user_keys = await UserService.get_all_keys(telegram_id=str(call.from_user.id))
 
-    text = (
-        f"Все ваши купленные ключи\n\n"
-    )
-
-    for key in user_keys:
-        server = await ServerService.find_one_or_none(id=key.server_id)
-        date = int(key.expires_at)
-        date = datetime.fromtimestamp(
-            date / 1000, tz=timezone.utc).strftime('%Y-%m-%d')
-        text += (
-            f"Время действия ключа <code>{date}</code>\n"
-            f"Страна действия: <b>{server.name_in_bot}</b>\n"
-            f"Ваш ключ:\n"
-            f"<code>{key.value}</code>\n\n"
+    if user_keys:
+        text = (
+            f"Все ваши купленные ключи\n\n"
         )
 
-    text += f"📜 Для активации воспользуйтесь прикрепленной инструкцией."
+        for key in user_keys:
+            server = await ServerService.find_one_or_none(id=key.server_id)
+            date = int(key.expires_at)
+            date = datetime.fromtimestamp(
+                date / 1000, tz=timezone.utc).strftime('%Y-%m-%d')
+            text += (
+                f"Время действия ключа <code>{date}</code>\n"
+                f"Страна действия: <b>{server.name_in_bot}</b>\n"
+                f"Ваш ключ:\n"
+                f"<code>{key.value}</code>\n\n"
+            )
 
-    await call.message.edit_text(
-        text=text,
-        reply_markup=keys_inline_kb()
-    )
+        text += f"📜 Для активации воспользуйтесь прикрепленной инструкцией."
+
+        await call.message.edit_text(
+            text=text,
+            reply_markup=keys_inline_kb()
+        )
+    else:
+        await call.message.edit_text(
+            text="Нет купленных ключей",
+            reply_markup=home_inline_kb()
+        )
