@@ -96,6 +96,7 @@ async def admin_handler_user(call: CallbackQuery):
 
 @router.callback_query(F.data == 'add_server_admin', F.from_user.id.in_(settings.ADMINS_LIST))
 async def admin_add_server(call: CallbackQuery, state: FSMContext):
+    await state.clear()
     msg = await call.message.edit_text(text=f"Для добавления сервера введите Название\n", reply_markup=admin_cancel_kb())
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -196,6 +197,7 @@ async def admin_get_all_keys(call: CallbackQuery):
 
 @router.callback_query(F.data == 'generate_key_admin', F.from_user.id.in_(settings.ADMINS_LIST))
 async def admin_generate_key(call: CallbackQuery, state: FSMContext):
+    await state.clear()
     msg = await call.message.edit_text(
         text=f"Для генерации ключа введите telegram_id для присвоения:\n 0 для генерации на админа",
         reply_markup=admin_cancel_kb()
@@ -325,7 +327,7 @@ async def admin_confirm_add_key(call: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == 'upd_balance_user', F.from_user.id.in_(settings.ADMINS_LIST))
 async def admin_update_balance(call: CallbackQuery, state: FSMContext):
-
+    await state.clear()
     msg = await call.message.edit_text(text="input telegram id", reply_markup=admin_cancel_kb())
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(UpdateBalance.telegram_id)
@@ -411,7 +413,7 @@ async def admin_handler_promo(call: CallbackQuery):
 
 @router.callback_query(F.data == 'gen_promo', F.from_user.id.in_(settings.ADMINS_LIST))
 async def admin_gen_promo(call: CallbackQuery, state: FSMContext):
-
+    await state.clear()
     msg = await call.message.edit_text(
         text="Для генерации промокода введите Код активации",
         reply_markup=admin_cancel_kb()

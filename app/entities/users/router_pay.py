@@ -32,7 +32,7 @@ class AddBalance(StatesGroup):
 
 @router.callback_query(F.data == 'top_up')
 async def update_user_balance(call: CallbackQuery, state: FSMContext):
-
+    await state.clear()
     msg = await call.message.edit_text(
         f"Введите сумму для пополнения\n\n"
         f"Минимальная сумма пополнения 80\n"
@@ -106,6 +106,9 @@ async def confirm_add_balance(call: CallbackQuery, state: FSMContext):
             currency='RUB',
             need_phone_number=True,
             send_phone_number_to_provider=True,
+            need_email=True,
+            send_email_to_provider=True,
+            start_parameter='test',
             prices=[
                 LabeledPrice(
                     label=f'Оплата {price}',
@@ -206,7 +209,8 @@ async def successful_payment(message: Message, state: FSMContext):
 @router.message(StateFilter(AddBalance.buying))
 async def unsuccessful_payment(message: Message, state: FSMContext):
     await del_msg(message, state)
-    await message.answer(
+    msg = await message.answer(
         text="Не удалось выполнить платеж!",
         reply_markup=get_key_inline_kb()
     )
+    await state.update_data(last_msg_id=msg.message_id)

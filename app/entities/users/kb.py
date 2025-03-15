@@ -55,7 +55,8 @@ def gen_key_inline_kb() -> InlineKeyboardMarkup:
 def servers_inline_kb(servers: List) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for server in servers:
-        kb.button(text=f'🌐 {server}', callback_data=f'get_key_confirm:{server}')
+        kb.button(text=f'🌐 {server}',
+                  callback_data=f'get_key_confirm:{server}')
     kb.button(text='🏠 Главное меню', callback_data='home')
     kb.adjust(1)
     return kb.as_markup()

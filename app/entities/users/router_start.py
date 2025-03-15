@@ -51,6 +51,11 @@ async def PROFILE_TEXT(balance: float, date_expire: str, refer_id: str) -> str:
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, command: CommandObject, state: FSMContext):
+    
+    data = await state.get_data()
+    if data.get('last_msg_id'):
+        await del_msg(message, state)
+        
     await state.clear()
     user_id = str(message.from_user.id)
 
@@ -77,14 +82,20 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext)
         else:
             logger.info(f"New user reg {user_info.model_dump()}")
 
-    await message.answer(
+    msg = await message.answer(
         text=await HOME_TEXT(),
         reply_markup=main_inline_kb(message.from_user.id)
     )
+    
+    await state.update_data(last_msg_id=msg.message_id)
 
 
 @router.message(Command('profile'))
 async def profile_command(message: Message, state: FSMContext):
+    data = await state.get_data()
+    if data.get('last_msg_id'):
+        await del_msg(message, state)
+        
     await state.clear()
     tg_id = str(message.from_user.id)
     user = await UserService.find_one_or_none(telegram_id=tg_id)
@@ -94,17 +105,18 @@ async def profile_command(message: Message, state: FSMContext):
     if date is None:
         date = "Нет купленных ключей"
 
-    if user is not None:
-        await message.answer(
+    msg = await message.answer(
             text=await PROFILE_TEXT(balance, date, str(message.from_user.id)),
             reply_markup=profile_inline_kb()
         )
+    
+    await state.update_data(last_msg_id=msg.message_id)
 
 
 @router.callback_query(F.data == 'home')
 async def page_home(call: CallbackQuery):
-    # await call.message.delete()
-    await call.message.edit_text(
+    await call.message.delete()
+    await call.message.answer(
         text=await HOME_TEXT(),
         reply_markup=main_inline_kb(call.from_user.id)
     )
@@ -160,7 +172,7 @@ async def get_promocode(message: Message, state: FSMContext):
             f"Промокод успешно применен!\n"
             f"Ваш баланс пополнен на {promocode_info.bonus}₽"
         )
-        await message.answer(
+        msg = await message.answer(
             text=text,
             reply_markup=home_inline_kb()
         )
@@ -169,10 +181,12 @@ async def get_promocode(message: Message, state: FSMContext):
             f"Промокод не найден :(\n"
             f"Попробуйте ввести другой для активации"
         )
-        await message.answer(
+        msg = await message.answer(
             text=text,
             reply_markup=promocode_inline_kb()
         )
+        
+    await state.update_data(last_msg_id=msg.message_id)
 
 
 @router.callback_query(F.data == 'get_all_keys')
@@ -191,7 +205,7 @@ async def get_all_user_keys(call: CallbackQuery):
                 date / 1000, tz=timezone.utc).strftime('%Y-%m-%d')
             text += (
                 f"Время действия ключа <code>{date}</code>\n"
-                f"Страна действия: <b>{server.name_in_bot}</b>\n"
+                f"Страна действия: <b>{server.name}</b>\n"
                 f"Ваш ключ:\n"
                 f"<code>{key.value}</code>\n\n"
             )

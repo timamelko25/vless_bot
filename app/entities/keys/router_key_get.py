@@ -41,6 +41,7 @@ async def get_servers(call: CallbackQuery | Message):
 async def get_key_confirm(call: CallbackQuery, state: FSMContext):
     _, server = call.data.split(":", 1)
     await state.update_data(server=server)
+    
     user = await UserService.find_one_or_none(telegram_id=str(call.from_user.id))
     text = (
         f"Текущий баланс {user.balance}\n\n"

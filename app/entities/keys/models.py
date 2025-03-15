@@ -13,14 +13,15 @@ class Key(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey('users.id'))
     user: Mapped["User"] = relationship(
         "User",
-        back_populates='keys'
+        back_populates='keys',
+        lazy='selectin'
     )
 
     server_id: Mapped[str] = mapped_column(ForeignKey('servers.id'))
     server: Mapped["Server"] = relationship(
         "Server",
         back_populates='keys',
-
+        lazy='selectin'
     )
 
     id_panel: Mapped[str]
