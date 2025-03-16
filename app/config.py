@@ -56,8 +56,10 @@ settings = Settings()
 PG_URL = settings.get_pg_url()
 REDIS_URL = settings.get_redis_url()
 
-bot = Bot(token=settings.BOT_TOKEN,
-          default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(
+    token=settings.BOT_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
 dp = Dispatcher(storage=RedisStorage.from_url(REDIS_URL))
 admins = settings.ADMINS_LIST
 

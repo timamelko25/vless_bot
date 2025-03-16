@@ -34,9 +34,12 @@ class AddBalance(StatesGroup):
 async def update_user_balance(call: CallbackQuery, state: FSMContext):
     await state.clear()
     msg = await call.message.edit_text(
-        f"Введите сумму для пополнения\n\n"
-        f"Минимальная сумма пополнения 80\n"
-        f"Максимальная сумма пополнения 10000"
+        text=(
+            f"Введите сумму для пополнения\n\n"
+            f"Минимальная сумма пополнения 80\n"
+            f"Максимальная сумма пополнения 10000"
+        ),
+        reply_markup=cancel_inline_kb()
     )
 
     await state.update_data(last_msg_id=msg.message_id)

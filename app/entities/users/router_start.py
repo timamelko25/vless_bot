@@ -17,7 +17,7 @@ from app.entities.keys.service import KeyService
 from app.entities.promocodes.service import PromocodeService
 from .schemas import NewUserScheme
 from .service import UserService
-from .kb import main_inline_kb, profile_inline_kb, keys_inline_kb, promocode_inline_kb, home_inline_kb
+from .kb import cancel_inline_kb, main_inline_kb, profile_inline_kb, keys_inline_kb, promocode_inline_kb, home_inline_kb
 
 
 router = Router()
@@ -51,11 +51,11 @@ async def PROFILE_TEXT(balance: float, date_expire: str, refer_id: str) -> str:
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, command: CommandObject, state: FSMContext):
-    
+
     data = await state.get_data()
     if data.get('last_msg_id'):
         await del_msg(message, state)
-        
+
     await state.clear()
     user_id = str(message.from_user.id)
 
@@ -86,7 +86,7 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext)
         text=await HOME_TEXT(),
         reply_markup=main_inline_kb(message.from_user.id)
     )
-    
+
     await state.update_data(last_msg_id=msg.message_id)
 
 
@@ -95,7 +95,7 @@ async def profile_command(message: Message, state: FSMContext):
     data = await state.get_data()
     if data.get('last_msg_id'):
         await del_msg(message, state)
-        
+
     await state.clear()
     tg_id = str(message.from_user.id)
     user = await UserService.find_one_or_none(telegram_id=tg_id)
@@ -106,10 +106,10 @@ async def profile_command(message: Message, state: FSMContext):
         date = "Нет купленных ключей"
 
     msg = await message.answer(
-            text=await PROFILE_TEXT(balance, date, str(message.from_user.id)),
-            reply_markup=profile_inline_kb()
-        )
-    
+        text=await PROFILE_TEXT(balance, date, str(message.from_user.id)),
+        reply_markup=profile_inline_kb()
+    )
+
     await state.update_data(last_msg_id=msg.message_id)
 
 
@@ -151,7 +151,8 @@ async def get_help_for_key(call: CallbackQuery):
 async def start_promocode(call: CallbackQuery, state: FSMContext):
     await state.clear()
     await call.message.edit_text(
-        text="Введите промокод для активации"
+        text="Введите промокод для активации",
+        reply_markup=cancel_inline_kb()
     )
     await state.update_data(last_msg_id=call.message.message_id)
     await state.set_state()
@@ -185,7 +186,7 @@ async def get_promocode(message: Message, state: FSMContext):
             text=text,
             reply_markup=promocode_inline_kb()
         )
-        
+
     await state.update_data(last_msg_id=msg.message_id)
 
 
