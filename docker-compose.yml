@@ -3,10 +3,14 @@ services:
   aiogram:
     container_name: aiogram_vless
     build: ./
-    command: bash -c "alembic upgrade head && python app/main.py"
+    command: bash -c "alembic upgrade head && python -m app.main"
     environment:
       - PYTHONPATH=/app
+    ports:
+      - "8000:8000"
     restart: always
+    depends_on:
+      - rabbitmq
 
   postgres:
     image: postgres:latest
@@ -37,7 +41,7 @@ services:
                -c default_statistics_target=100
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_NAME}" ]
-      interval: 10s
+      interval: 30s
       timeout: 10s
       retries: 5
     restart: unless-stopped
@@ -47,6 +51,8 @@ services:
   redis:
     image: redis:latest
     container_name: redis_vless
+    env_file:
+      - ./.env
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_USER=${REDIS_USER}
@@ -54,7 +60,7 @@ services:
     ports:
       - "6380:6379"
     volumes:
-      - ./redisdata:/data
+      - redisdata:/data
     deploy:
       resources:
         limits:
@@ -70,7 +76,7 @@ services:
         redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
       '
     healthcheck:
-      test: ["CMD", "redis-cli", "-u", "redis://$REDIS_USER:$REDIS_USER_PASSWORD@localhost:6379", "ping"]
+      test: [ "CMD", "redis-cli", "-u", "redis://$REDIS_USER:$REDIS_USER_PASSWORD@localhost:6379", "ping" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -80,6 +86,38 @@ services:
     depends_on:
       - postgres
 
+  rabbitmq:
+    image: rabbitmq:3.10.7-management
+    container_name: rabbitmq_vless
+    env_file:
+      - ./.env
+    hostname: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USERNAME}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+      - RABBITMQ_DEFAULT_VHOST=${VHOST}
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit log_levels [{connection,error},{default,error}] disk_free_limit 2147483648
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
 volumes:
   pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  rabbitmqdata:
     driver: local

@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     REDIS_HOST: str
     REDIS_PORT: int
     REDIS_DB: int
+    
+    RABBITMQ_USERNAME: str
+    RABBITMQ_PASSWORD: str
+    RABBITMQ_HOST: str
+    RABBITMQ_PORT: str
+    VHOST: str
+    
+    BASE_URL: str
 
     VLESS_USERNAME: str
     VLESS_PASSWORD: str
@@ -49,6 +57,9 @@ class Settings(BaseSettings):
             f"redis://{self.REDIS_USER}:{self.REDIS_PASSWORD}@"
             f"{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
         )
+        
+    def get_webhook(self):
+        return f"{self.BASE_URL}/webhook"
 
 
 settings = Settings()

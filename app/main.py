@@ -1,8 +1,12 @@
 import asyncio
 
 from loguru import logger
-from aiogram.types import BotCommand, BotCommandScopeDefault
-from app.config import bot, dp, admins
+from aiogram.types import BotCommand, BotCommandScopeDefault, Update
+from fastapi import FastAPI, Request
+from contextlib import asynccontextmanager
+import uvicorn
+
+from app.config import bot, dp, admins, settings
 from app.entities.users.router_start import router as user_router_start
 from app.entities.users.router_pay import router as user_router_pay
 from app.entities.keys.router_key_get import router as key_router_get
@@ -21,6 +25,10 @@ async def set_commands():
 async def start_bot():
 
     await set_commands()
+    dp.include_router(user_router_start)
+    dp.include_router(user_router_pay)
+    dp.include_router(key_router_get)
+    dp.include_router(admin_router)
 
     for admin_id in admins:
         try:
@@ -36,24 +44,61 @@ async def stop_bot():
             await bot.send_message(admin_id, f'︻デ══━一💥  Bot dead ')
     except:
         pass
+    await bot.delete_webhook()
     logger.error("Bot stopped")
 
 
-async def main():
+# async def main():
 
-    dp.include_router(user_router_start)
-    dp.include_router(user_router_pay)
-    dp.include_router(key_router_get)
-    dp.include_router(admin_router)
+#     dp.startup.register(start_bot)
+#     dp.shutdown.register(stop_bot)
 
-    dp.startup.register(start_bot)
-    dp.shutdown.register(stop_bot)
+#     try:
+#         await bot.delete_webhook(drop_pending_updates=True)
+#         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+#     finally:
+#         await bot.session.close()
 
+# if __name__ == '__main__':
+#     asyncio.run(main())
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Bot getting starting")
+    await start_bot()
+    # enable broker, scheduler + job
+    webhook_url = settings.get_webhook()
+    await bot.set_webhook(
+        url=webhook_url,
+        allowed_updates=dp.resolve_used_update_types(),
+        drop_pending_updates=True
+    )
+    logger.success(f"Webhook set {webhook_url}")
+    yield
+    logger.info("Bot getting stopped")
+    await stop_bot()
+    # close broker, scheduler
+    
+app = FastAPI(lifespan=lifespan)
+
+@app.post("/webhook")
+async def webhook(request: Request) -> None:
+    logger.info("Get request from webhook")
     try:
-        await bot.delete_webhook(drop_pending_updates=True)
-        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
-    finally:
-        await bot.session.close()
+        update_data = await request.json()
+        update = Update.model_validate(update_data, context={"bot": bot})
+        await dp.feed_update(bot, update)
+        logger.info("Обновление успешно обработано.")
+    except Exception as e:
+        logger.error(f"Ошибка при обработке обновления с вебхука: {e}")
+        
+@app.get("/test")
+async def test():
+    return {"status": "ok"}
 
-if __name__ == '__main__':
-    asyncio.run(main())
+def main():
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+if __name__ == "__main__":
+    main()

@@ -492,6 +492,7 @@ async def admin_confirm_get_promo(call: CallbackQuery, state: FSMContext):
     try:
         info = await PromocodeService.generate_promocode(data=data)
         if info:
+            logger.info("Промокод успешно добавлен")
             await call.message.edit_text(
                 text="Промокод успешно добавлен",
                 reply_markup=admin_kb()

@@ -10,3 +10,7 @@ aiohttp==3.11.11
 loguru==0.7.3
 alembic==1.14.1
 sqlalchemy-utils==0.41.2
+uvicorn==0.34.0
+fastapi==0.115.11
+faststream==0.5.35
+aio_pika==9.5.5
