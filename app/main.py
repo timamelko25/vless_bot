@@ -1,5 +1,3 @@
-import asyncio
-
 from loguru import logger
 from aiogram.types import BotCommand, BotCommandScopeDefault, Update
 from fastapi import FastAPI, Request
