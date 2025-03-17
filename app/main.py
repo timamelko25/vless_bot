@@ -4,11 +4,12 @@ from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 import uvicorn
 
-from app.config import bot, dp, admins, settings
+from app.config import bot, dp, admins, settings, broker
 from app.entities.users.router_start import router as user_router_start
 from app.entities.users.router_pay import router as user_router_pay
 from app.entities.keys.router_key_get import router as key_router_get
 from app.entities.admin.router import router as admin_router
+from app.broker.router_consumer import router as broker_router
 from app.entities import *
 
 
@@ -65,6 +66,7 @@ async def stop_bot():
 async def lifespan(app: FastAPI):
     logger.info("Bot getting starting")
     await start_bot()
+    await broker.start()
     # enable broker, scheduler + job
     webhook_url = settings.get_webhook()
     await bot.set_webhook(
@@ -76,9 +78,12 @@ async def lifespan(app: FastAPI):
     yield
     logger.info("Bot getting stopped")
     await stop_bot()
+    await broker.close()
     # close broker, scheduler
     
 app = FastAPI(lifespan=lifespan)
+
+app.include_router(broker_router)
 
 @app.post("/webhook")
 async def webhook(request: Request) -> None:

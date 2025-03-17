@@ -80,7 +80,8 @@ async def get_key(call: CallbackQuery, state: FSMContext):
             f"<code>{key.get('value')}</code>\n\n"
             "📜 Для активации воспользуйтесь прикрепленной инструкцией."
         )
-
+        
+        await broker.publish(f"Пользователь {user.telegram_id} купил ключ {key.get('email')}", "admin_msg")
         await call.message.edit_text(
             text=text,
             reply_markup=keys_inline_kb(),

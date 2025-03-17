@@ -10,7 +10,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import StateFilter
 
-from app.config import bot, settings
+from app.config import bot, settings, broker
 from app.utils.utils import del_msg
 from app.entities.servers.service import ServerService
 from app.entities.payments.service import PaymentService
@@ -182,26 +182,17 @@ async def successful_payment(message: Message, state: FSMContext):
 
         user_info = f"@{user.username} ({message.from_user.id})" if user.username else f"c ID {message.from_user.id}"
 
-        for admin_id in settings.ADMINS_LIST:
-            try:
-                if user.refer_id:
-                    text = (
-                        f"💲 Пользователь {user_info} пополнил баланс на {balance}\n"
-                        f"Пользователь реферальной системы получил бонус {float(balance) * 20 / 100}"
-                    )
-                else:
-                    text = (
-                        f"💲 Пользователь {user_info} пополнил баланс на {balance}"
-                    )
+        if user.refer_id:
+            text = (
+                f"💲 Пользователь {user_info} пополнил баланс на {balance}\n"
+                f"Пользователь реферальной системы получил бонус {float(balance) * 20 / 100}"
+            )
+        else:
+            text = (
+                f"💲 Пользователь {user_info} пополнил баланс на {balance}"
+            )
 
-                await bot.send_message(
-                    chat_id=admin_id,
-                    text=text
-                )
-
-            except Exception as e:
-                logger.error(
-                    f"Ошибка при отправке уведомления администраторам: {e}")
+        await broker.publish(text, "admin_msg")
 
         logger.info(f"Пользователь {user_info} пополнил баланс на {balance}")
         await message.answer(text="Баланс успешно пополнен!", reply_markup=gen_key_inline_kb())

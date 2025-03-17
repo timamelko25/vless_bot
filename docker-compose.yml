@@ -8,9 +8,14 @@ services:
       - PYTHONPATH=/app
     ports:
       - "8000:8000"
-    restart: always
+    restart: unless-stopped
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   postgres:
     image: postgres:latest
@@ -83,8 +88,6 @@ services:
     restart: unless-stopped
     tty: true
     stdin_open: true
-    depends_on:
-      - postgres
 
   rabbitmq:
     image: rabbitmq:3.10.7-management

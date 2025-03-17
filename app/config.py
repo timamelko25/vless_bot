@@ -2,6 +2,7 @@ import os
 from typing import List
 
 from loguru import logger
+from faststream.rabbit import RabbitBroker
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -29,13 +30,13 @@ class Settings(BaseSettings):
     REDIS_HOST: str
     REDIS_PORT: int
     REDIS_DB: int
-    
+
     RABBITMQ_USERNAME: str
     RABBITMQ_PASSWORD: str
     RABBITMQ_HOST: str
     RABBITMQ_PORT: str
     VHOST: str
-    
+
     BASE_URL: str
 
     VLESS_USERNAME: str
@@ -57,7 +58,13 @@ class Settings(BaseSettings):
             f"redis://{self.REDIS_USER}:{self.REDIS_PASSWORD}@"
             f"{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
         )
-        
+
+    def get_rabbitmq_url(self):
+        return (
+            f"amqp://{self.RABBITMQ_USERNAME}:{self.RABBITMQ_PASSWORD}@"
+            f"{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}/{self.VHOST}"
+        )
+
     def get_webhook(self):
         return f"{self.BASE_URL}/webhook"
 
@@ -79,5 +86,6 @@ log_file_path = os.path.join(os.path.dirname(
 logger.add(log_file_path, format=settings.FORMAT_LOG,
            level="INFO", rotation=settings.LOG_ROTATION)
 
+broker = RabbitBroker(url=settings.get_rabbitmq_url())
 # from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
