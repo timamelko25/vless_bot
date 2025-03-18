@@ -1,4 +1,3 @@
-from datetime import datetime
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
@@ -11,14 +10,14 @@ class Key(Base):
     __tablename__ = 'keys'
 
     user_id: Mapped[str] = mapped_column(ForeignKey('users.id'))
-    user: Mapped["User"] = relationship(
+    user: Mapped["User"] = relationship( # type: ignore
         "User",
         back_populates='keys',
         lazy='selectin'
     )
 
     server_id: Mapped[str] = mapped_column(ForeignKey('servers.id'))
-    server: Mapped["Server"] = relationship(
+    server: Mapped["Server"] = relationship( # type: ignore
         "Server",
         back_populates='keys',
         lazy='selectin'

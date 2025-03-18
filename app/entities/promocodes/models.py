@@ -1,8 +1,5 @@
-from typing import List
-from datetime import datetime
 
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
 

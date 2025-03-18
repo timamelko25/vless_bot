@@ -4,7 +4,6 @@ from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from app.config import settings
-from app.entities.users.service import UserService
 
 
 def home_inline_kb() -> InlineKeyboardMarkup:

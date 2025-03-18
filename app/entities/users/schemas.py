@@ -1,9 +1,7 @@
 from typing import Dict
-from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
-from .models import User
 
 
 class NewUserScheme(BaseModel):

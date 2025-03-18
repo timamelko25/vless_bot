@@ -1,21 +1,14 @@
-import asyncio
 from datetime import datetime, timezone
 
 from loguru import logger
 from aiogram import Router, F
-from aiogram.enums import ContentType
-from aiogram.types import Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
-from aiogram.filters import CommandStart, CommandObject, Command
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.filters import StateFilter
 
-from app.config import bot, settings
-from app.utils.utils import del_msg
+from app.config import broker
 from app.entities.servers.service import ServerService
 from app.entities.users.service import UserService
 from app.entities.users.kb import servers_inline_kb, keys_inline_kb, get_key_inline_kb, kb_confirm_get_key
-from .service import KeyService
 
 router = Router()
 
@@ -27,12 +20,12 @@ async def get_servers(call: CallbackQuery | Message):
     if servers_list:
         if isinstance(call, CallbackQuery):
             await call.message.edit_text(
-                f"<b>🌍 Выберете сервер</b>",
+                "<b>🌍 Выберете сервер</b>",
                 reply_markup=servers_inline_kb(servers_list)
             )
         else:
             await call.edit_text(
-                f"<b>🌍 Выберете сервер</b>",
+                "<b>🌍 Выберете сервер</b>",
                 reply_markup=servers_inline_kb(servers_list)
             )
 

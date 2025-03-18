@@ -11,7 +11,6 @@ from app.service.base import BaseService
 from app.database import connection
 from app.entities.keys.service import KeyService
 from app.entities.promocodes.service import PromocodeService
-from .schemas import KeyScheme
 from .models import User
 
 

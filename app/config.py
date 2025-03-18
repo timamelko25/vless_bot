@@ -5,7 +5,6 @@ from loguru import logger
 from faststream.rabbit import RabbitBroker
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
-from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.client.default import DefaultBotProperties
 from pydantic_settings import BaseSettings, SettingsConfigDict

@@ -1,23 +1,15 @@
-import asyncio
-from datetime import datetime
 
 from loguru import logger
 from aiogram import Router, F
-from aiogram.enums import ContentType
 from aiogram.types import Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
-from aiogram.filters import CommandStart, CommandObject, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import StateFilter
 
 from app.config import bot, settings, broker
 from app.utils.utils import del_msg
-from app.entities.servers.service import ServerService
 from app.entities.payments.service import PaymentService
-from app.entities.keys.service import KeyService
-from app.entities.keys.router_key_get import get_servers
-from .kb import gen_key_inline_kb, kb_confirm_upd, home_inline_kb, get_key_inline_kb, cancel_inline_kb, payment_inline_kb
-from .schemas import NewUserScheme
+from .kb import gen_key_inline_kb, kb_confirm_upd, get_key_inline_kb, cancel_inline_kb, payment_inline_kb
 from .service import UserService
 
 
@@ -35,9 +27,9 @@ async def update_user_balance(call: CallbackQuery, state: FSMContext):
     await state.clear()
     msg = await call.message.edit_text(
         text=(
-            f"Введите сумму для пополнения\n\n"
-            f"Минимальная сумма пополнения 80\n"
-            f"Максимальная сумма пополнения 10000"
+            "Введите сумму для пополнения\n\n"
+            "Минимальная сумма пополнения 80\n"
+            "Максимальная сумма пополнения 10000"
         ),
         reply_markup=cancel_inline_kb()
     )
@@ -54,8 +46,8 @@ async def get_balance(message: Message, state: FSMContext):
             await del_msg(message, state)
             msg = await message.answer(
                 text=(
-                    f"Ошибка. Минимальная сумма пополнения 80\n"
-                    f"Введите корректную сумму для пополнения"
+                    "Ошибка. Минимальная сумма пополнения 80\n"
+                    "Введите корректную сумму для пополнения"
                 ),
                 reply_markup=cancel_inline_kb()
             )
@@ -65,8 +57,8 @@ async def get_balance(message: Message, state: FSMContext):
             await del_msg(message, state)
             msg = await message.answer(
                 text=(
-                    f"Ошибка. Максимальная сумма пополнения 10000!\n"
-                    f"Введите корректную сумму для пополнения"
+                    "Ошибка. Максимальная сумма пополнения 10000!\n"
+                    "Введите корректную сумму для пополнения"
                 ),
                 reply_markup=cancel_inline_kb()
             )
@@ -196,7 +188,7 @@ async def successful_payment(message: Message, state: FSMContext):
 
         logger.info(f"Пользователь {user_info} пополнил баланс на {balance}")
         await message.answer(text="Баланс успешно пополнен!", reply_markup=gen_key_inline_kb())
-    except Exception as e:
+    except Exception:
         logger.error("Ошибка при пополнении баланса после получения оплаты")
 
 

@@ -1,5 +1,3 @@
-import string
-import random
 import aiohttp
 import json
 import uuid

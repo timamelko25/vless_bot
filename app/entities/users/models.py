@@ -1,7 +1,6 @@
 from typing import List
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey
 from sqlalchemy.orm import class_mapper
 
 from app.database import Base
@@ -23,7 +22,7 @@ class User(Base):
 
     description: Mapped[str] = mapped_column(nullable=True)
 
-    keys: Mapped[List['Key']] = relationship(
+    keys: Mapped[List['Key']] = relationship( # type: ignore
         "Key",
         back_populates='user',
         lazy='selectin',

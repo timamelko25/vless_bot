@@ -1,11 +1,7 @@
 from typing import Dict
-import uuid
 import json
 
-from app.entities.servers.service import ServerService
 from app.service.base import BaseService
-from app.config import settings
-from app.database import connection
 from .models import Key
 from .panel_api import get_inbounds, add_client
 
@@ -27,7 +23,7 @@ class KeyService(BaseService):
         }
 
         info = await get_inbounds(url=server.domain)
-        client = await add_client(data, url=server.domain)
+        await add_client(data, url=server.domain)
 
         key = info.get('obj')
         stream_settings = key[0].get('streamSettings', {})

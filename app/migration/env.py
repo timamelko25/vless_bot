@@ -8,11 +8,6 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 from app.database import PG_URL, Base
-from app.entities.users.models import User
-from app.entities.keys.models import Key
-from app.entities.servers.models import Server
-from app.entities.payments.models import HistoryPayment
-from app.entities.promocodes.models import Promocode
 
 
 # this is the Alembic Config object, which provides

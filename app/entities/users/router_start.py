@@ -1,19 +1,14 @@
-import asyncio
 from datetime import datetime, timezone
 
 from loguru import logger
 from aiogram import Router, F
-from aiogram.enums import ContentType
-from aiogram.types import Message, CallbackQuery, LabeledPrice, PreCheckoutQuery
+from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, CommandObject, Command
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import StateFilter
 
-from app.config import bot, settings
 from app.utils.utils import del_msg
 from app.entities.servers.service import ServerService
-from app.entities.keys.service import KeyService
 from app.entities.promocodes.service import PromocodeService
 from .schemas import NewUserScheme
 from .service import UserService
@@ -179,8 +174,8 @@ async def get_promocode(message: Message, state: FSMContext):
         )
     else:
         text = (
-            f"Промокод не найден :(\n"
-            f"Попробуйте ввести другой для активации"
+            "Промокод не найден :(\n"
+            "Попробуйте ввести другой для активации"
         )
         msg = await message.answer(
             text=text,
@@ -196,7 +191,7 @@ async def get_all_user_keys(call: CallbackQuery):
 
     if user_keys:
         text = (
-            f"Все ваши купленные ключи\n\n"
+            "Все ваши купленные ключи\n\n"
         )
 
         for key in user_keys:
@@ -211,7 +206,7 @@ async def get_all_user_keys(call: CallbackQuery):
                 f"<code>{key.value}</code>\n\n"
             )
 
-        text += f"📜 Для активации воспользуйтесь прикрепленной инструкцией."
+        text += "📜 Для активации воспользуйтесь прикрепленной инструкцией."
 
         await call.message.edit_text(
             text=text,

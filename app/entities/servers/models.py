@@ -1,8 +1,6 @@
 from typing import List
-from datetime import datetime
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey
 
 from app.database import Base
 
@@ -14,7 +12,7 @@ class Server(Base):
     domain: Mapped[str] = mapped_column(unique=True, nullable=False)
     description: Mapped[str] = mapped_column(nullable=True)
 
-    keys: Mapped[List["Key"]] = relationship(
+    keys: Mapped[List["Key"]] = relationship( # type: ignore
         "Key",
         back_populates='server',
         lazy='selectin',

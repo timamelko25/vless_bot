@@ -21,7 +21,7 @@ class BaseService:
 
     @classmethod
     @connection()
-    async def find_all(cls, session, **filter_by):
+    async def find_all(cls, session: AsyncSession, **filter_by):
         query = select(cls.model).filter_by(**filter_by)
         result = await session.execute(query)
         return result.scalars().all()

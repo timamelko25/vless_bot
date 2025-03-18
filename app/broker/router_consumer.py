@@ -1,10 +1,7 @@
-from datetime import datetime
 
-from loguru import logger
 from faststream.rabbit.fastapi import RabbitRouter
 
 from app.config import settings, bot
-from app.database import connection
 
 router = RabbitRouter(url=settings.get_rabbitmq_url())
 
