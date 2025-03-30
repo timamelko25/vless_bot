@@ -2,6 +2,8 @@ import os
 from typing import List
 
 from loguru import logger
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from faststream.rabbit import RabbitBroker
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
@@ -21,7 +23,9 @@ class Settings(BaseSettings):
     PG_PASSWORD: str
     PG_HOST: str
     PG_PORT: int
+    PG_JOBS_PORT: int
     PG_NAME: str
+    PG_JOBS_NAME: str
 
     REDIS_USER: str
     REDIS_USER_PASSWORD: str
@@ -50,6 +54,12 @@ class Settings(BaseSettings):
         return (
             f"postgresql+asyncpg://{self.PG_USER}:{self.PG_PASSWORD}@"
             f"{self.PG_HOST}:{self.PG_PORT}/{self.PG_NAME}"
+        )
+        
+    def get_pg_jobs_url(self):
+        return (
+            f"postgresql://{self.PG_USER}:{self.PG_PASSWORD}@"
+            f"{self.PG_HOST}:{self.PG_JOBS_PORT}/{self.PG_JOBS_NAME}"
         )
 
     def get_redis_url(self):
@@ -86,5 +96,8 @@ logger.add(log_file_path, format=settings.FORMAT_LOG,
            level="INFO", rotation=settings.LOG_ROTATION)
 
 broker = RabbitBroker(url=settings.get_rabbitmq_url())
-# from apscheduler.schedulers.asyncio import AsyncIOScheduler
-# scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
+
+scheduler = AsyncIOScheduler(
+    jobstores={'default': SQLAlchemyJobStore(url=settings.get_pg_jobs_url())},
+    timezone="Europe/Moscow"
+    )

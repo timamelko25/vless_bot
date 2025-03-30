@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta, datetime, timezone
 
 from loguru import logger
 from aiogram import Router, F
@@ -13,7 +14,20 @@ from app.entities.users.service import UserService
 from app.entities.keys.service import KeyService
 from app.entities.servers.service import ServerService
 from app.entities.promocodes.service import PromocodeService
-from .kb import admin_kb, admin_kb_confirm_add_key, admin_kb_promo, admin_kb_server, admin_kb_user, admin_kb_key, admin_cancel_kb, admin_kb_confirm_upd_balance, admin_kb_confirm_add_server, admin_kb_confirm_gen_promo
+from .kb import (
+    admin_kb,
+    admin_kb_confirm_add_key,
+    admin_kb_del_server,
+    admin_kb_key_options,
+    admin_kb_promo,
+    admin_kb_server,
+    admin_kb_user,
+    admin_kb_key,
+    admin_cancel_kb,
+    admin_kb_confirm_upd_balance,
+    admin_kb_confirm_add_server,
+    admin_kb_confirm_gen_promo,
+)
 
 router = Router()
 
@@ -47,56 +61,83 @@ class NewPromo(StatesGroup):
     confirm = State()
 
 
-@router.callback_query(F.data == 'cancel', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(F.data == "cancel", F.from_user.id.in_(settings.ADMINS_LIST))
 async def admin_handler_cancel(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    await call.message.edit_text(
-        text="Cancel operation",
-        reply_markup=admin_kb()
-    )
+    await call.message.edit_text(text="Cancel operation", reply_markup=admin_kb())
 
 
-@router.callback_query(F.data == 'admin_panel', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data == "admin_panel", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def start_admin(call: CallbackQuery):
-
     await call.message.edit_text(
         text="Вам разрешен доступ в админ-панель. Выберите необходимое действие.",
-        reply_markup=admin_kb()
+        reply_markup=admin_kb(),
     )
 
 
-@router.callback_query(F.data == 'statistics', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(F.data == "statistics", F.from_user.id.in_(settings.ADMINS_LIST))
 async def admin_stats(call: CallbackQuery):
     # сделать в сервисах пользователя и сервера функции для статистики
     # клавиатура для подбора статистики
 
-    stats = get_inbounds()
-    await call.message.edit_text(
-        text=stats,
-        reply_markup=admin_kb()
-    )
+    stats = await get_inbounds()
+    await call.message.edit_text(text=stats, reply_markup=admin_kb())
 
 
-@router.callback_query(F.data == 'handler_user', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data == "handler_user", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_handler_user(call: CallbackQuery):
-    await call.message.edit_text(
-        text="Choose option",
-        reply_markup=admin_kb_user()
-    )
+    await call.message.edit_text(text="Choose option", reply_markup=admin_kb_user())
 
 
-@router.callback_query(F.data == 'handler_server', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data == "handler_server", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_handler_server(call: CallbackQuery):
-    await call.message.edit_text(
-        text="Choose option",
-        reply_markup=admin_kb_server()
+    await call.message.edit_text(text="Choose option", reply_markup=admin_kb_server())
+
+
+@router.callback_query(
+    F.data == "get_servers_admin", F.from_user.id.in_(settings.ADMINS_LIST)
+)
+async def admin_del_server(call: CallbackQuery):
+    servers = await ServerService.find_all()
+    await call.message.delete()
+    for server in servers:
+        text = (
+            f"Имя {server.name}\n"
+            f"Домен {server.domain}\n"
+            f"Количество купленных ключей {len(server.keys)}"
+        )
+        await call.message.answer(
+            text=text, reply_markup=admin_kb_del_server(server.name)
+        )
+    await call.message.answer(
+        text="Все выделенные сервера", reply_markup=admin_kb_server()
     )
 
 
-@router.callback_query(F.data == 'add_server_admin', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(F.data.startswith("del_server_admin:"))
+async def admin_del_server_confirm(call: CallbackQuery):
+    server_name = call.data.split(":")[1]
+    await ServerService.delete_server(server_name=server_name)
+
+    await call.message.answer(
+        text="Сервер успешно удален", reply_markup=admin_kb_server()
+    )
+
+
+@router.callback_query(
+    F.data == "add_server_admin", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_add_server(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    msg = await call.message.edit_text(text="Для добавления сервера введите Название\n", reply_markup=admin_cancel_kb())
+    msg = await call.message.edit_text(
+        text="Для добавления сервера введите Название\n", reply_markup=admin_cancel_kb()
+    )
 
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(NewServer.name)
@@ -107,7 +148,9 @@ async def admin_get_name_server(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
     await del_msg(message, state)
 
-    msg = await message.answer(text="Введите доменное имя сервера\n", reply_markup=admin_cancel_kb())
+    msg = await message.answer(
+        text="Введите доменное имя сервера\n", reply_markup=admin_cancel_kb()
+    )
 
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(NewServer.domain)
@@ -124,82 +167,132 @@ async def admin_get_domain_server(message: Message, state: FSMContext):
         f"Доменное имя сервера{data['domain']}\n"
     )
 
-    msg = await message.answer(
-        text=text,
-        reply_markup=admin_kb_confirm_add_server()
-    )
+    msg = await message.answer(text=text, reply_markup=admin_kb_confirm_add_server())
 
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(NewServer.confirm)
 
 
-@router.callback_query(F.data == 'confirm_add_server', F.from_user.id.in_(settings.ADMINS_LIST), NewServer.confirm)
+@router.callback_query(
+    F.data == "confirm_add_server",
+    F.from_user.id.in_(settings.ADMINS_LIST),
+    NewServer.confirm,
+)
 async def admin_confirm_add_server(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     # await bot.delete_message(chat_id=call.from_user.id, message_id=data['last_msg_id'])
     try:
-        info = await ServerService.add(
-            name=data['name'],
-            domain=data['domain']
-        )
+        info = await ServerService.add(name=data["name"], domain=data["domain"])
         if info:
             await call.message.edit_text(
-                text="Сервер успешно добавлен",
-                reply_markup=admin_kb()
+                text="Сервер успешно добавлен", reply_markup=admin_kb()
             )
     except Exception as e:
         logger.error(f"Ошибка при добавлении сервера {e}")
         await call.message.edit_text(
-            text="Ошибка при добавлении сервера",
-            reply_markup=admin_kb()
+            text="Ошибка при добавлении сервера", reply_markup=admin_kb()
         )
 
 
-@router.callback_query(F.data == 'handler_key', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data == "handler_key", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_handler_key(call: CallbackQuery):
-    await call.message.edit_text(
-        text="Choose option",
-        reply_markup=admin_kb_key()
-    )
+    await call.message.edit_text(text="Choose option", reply_markup=admin_kb_key())
 
 
-@router.callback_query(F.data == 'get_all_keys_admin', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data == "get_all_keys_admin", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_get_all_keys(call: CallbackQuery):
-
     keys = await KeyService.find_all()
     if not keys:
         await call.message.edit_text(
-            text="Нет выпущенных ключей",
-            reply_markup=admin_kb()
+            text="Нет выпущенных ключей", reply_markup=admin_kb()
         )
     else:
-        await call.message.edit_text(
-            text="Все выпущенные ключи"
-        )
         for key in keys:
             user = await UserService.find_one_or_none(id=key.user_id)
             server = await ServerService.find_one_or_none(id=key.server_id)
+            date = int(key.expires_at)
+            date = datetime.fromtimestamp(date / 1000, tz=timezone.utc).strftime(
+                "%Y-%m-%d"
+            )
             text = (
                 f"<b>ID пользователя:</b> <code>{user.telegram_id}</code>\n"
                 f"<b>Сервер ключа:</b> <code>{server.name}</code>\n"
                 f"<b>ID ключа:</b> <code>{key.id_panel}</code>\n"
                 f"<b>Email пользователя:</b> <code>{key.email}</code>\n"
-                f"<b>Остаток жизни:</b> <code>{key.expires_at}</code>\n"
+                f"<b>Остаток жизни:</b> <code>{date}</code>\n"
                 f"Значение ключа {key.value}"
-                f"<b>Статус ключа:</b> {'✅ Активен' if key.get('status') else '❌ Отключен'}\n"
+                f"<b>Статус ключа:</b> {'✅ Активен' if key.status else '❌ Отключен'}\n"
             )
-            await call.message.edit_text(
+            await call.message.answer(
                 text=text,
-                reply_markup=admin_kb_key() # сделать нормальную клаву для обновления ключа удаления или что-то еще (посмотреть из бота самой панели)
-                )
+                reply_markup=admin_kb_key_options(
+                    key.id
+                ),  # сделать нормальную клаву для обновления ключа удаления или что-то еще (посмотреть из бота самой панели)
+            )
+        await call.message.answer(
+            text="Все выпущенные ключи", reply_markup=admin_kb_key()
+        )
 
 
-@router.callback_query(F.data == 'generate_key_admin', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data.startswith("reset_param:"), F.from_user.id.in_(settings.ADMINS_LIST)
+)
+async def admin_reset_key(call: CallbackQuery):
+    key_id = call.data.split(":")[1]
+    param = call.data.split(":")[2]
+
+    try:
+        key = await KeyService.find_one_or_none(id=int(key_id))
+        data = {
+            "id_panel": key.id_panel,
+            "email": key.email,
+            "limitIp": 3,
+            "totalGb": 107374182400,
+            "expiryTime": key.expires_at,
+            "enable": key.status,
+        }
+
+        if param == "expiryTime":
+            current_time = datetime.now(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            new_time = current_time + timedelta(days=30)
+            date = int(new_time.timestamp() * 1000)
+            data["expiryTime"] = date
+
+            await KeyService.update_key(data=data, server=key.server)
+
+            await call.message.edit_text(
+                text=f"Ключ (время жизни) {key.email} успешно обновлен",
+                reply_markup=admin_kb_key(),
+            )
+        elif param == "delete":
+            await KeyService.delete_key(uuid=key.id_panel, server=key.server)
+
+            await call.message.edit_text(text=f"Ключ {key.email} успешно удален")
+    except Exception as e:
+        logger.error(f"Error while updating from admin panel {e}")
+
+        await call.message.answer(
+            text="Ошибка при действии с ключом", reply_markup=admin_kb_key()
+        )
+
+
+# сделать вывод всех ключей по серверам
+
+
+@router.callback_query(
+    F.data == "generate_key_admin", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_generate_key(call: CallbackQuery, state: FSMContext):
     await state.clear()
     msg = await call.message.edit_text(
         text="Для генерации ключа введите telegram_id для присвоения:\n 0 для генерации на админа",
-        reply_markup=admin_cancel_kb()
+        reply_markup=admin_cancel_kb(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -213,7 +306,7 @@ async def admin_get_telegram_id(message: Message, state: FSMContext):
 
     msg = await message.answer(
         text="Для генерации ключа введите email (название):\n 0 для случайного имени",
-        reply_markup=admin_cancel_kb()
+        reply_markup=admin_cancel_kb(),
     )
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(NewKey.email)
@@ -226,7 +319,7 @@ async def admin_get_email_keygen(message: Message, state: FSMContext):
 
     msg = await message.answer(
         text="Введите число для ограничения IP\n 0 - безлимитное число пользователей",
-        reply_markup=admin_cancel_kb()
+        reply_markup=admin_cancel_kb(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -240,7 +333,7 @@ async def admin_get_limit(message: Message, state: FSMContext):
 
     msg = await message.answer(
         text="Введите число для ограничения объема трафика в битах\n 0 - безлимитный объем трафика",
-        reply_markup=admin_cancel_kb()
+        reply_markup=admin_cancel_kb(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -253,8 +346,7 @@ async def admin_get_totalgb(message: Message, state: FSMContext):
     await del_msg(message, state)
     # сделать reply kb для выбора сервера
     msg = await message.answer(
-        text="Введите название сервера",
-        reply_markup=admin_cancel_kb()
+        text="Введите название сервера", reply_markup=admin_cancel_kb()
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -268,7 +360,7 @@ async def admin_get_server(message: Message, state: FSMContext):
     # добавить поиск сервера в бд если нет то ввести еще раз
     msg = await message.answer(
         text="Введите дату действия ключа в формате (год-число-месяц)\n 0 - неограниченное время пользования",
-        reply_markup=admin_cancel_kb()
+        reply_markup=admin_cancel_kb(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -283,8 +375,9 @@ async def admin_get_email(message: Message, state: FSMContext):
     await del_msg(message, state)
 
     data = await state.get_data()
-    email = str(uuid.uuid4()).replace(
-        '-', '')[:10] if data['email'] == 0 else data['email']
+    email = (
+        str(uuid.uuid4()).replace("-", "")[:10] if data["email"] == 0 else data["email"]
+    )
 
     text = (
         f"Проверьте введенные поля\n"
@@ -294,16 +387,15 @@ async def admin_get_email(message: Message, state: FSMContext):
         f"Лимит трафика {data['totalGB']}\n"
         f"Время действия {date}\n"
     )
-    msg = await message.answer(
-        text=text,
-        reply_markup=admin_kb_confirm_add_key()
-    )
+    msg = await message.answer(text=text, reply_markup=admin_kb_confirm_add_key())
 
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(NewKey.confirm)
 
 
-@router.callback_query(F.data == 'confirm_add_key', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data == "confirm_add_key", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_confirm_add_key(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     # await bot.delete_message(chat_id=call.from_user.id, message_id=data["last_msg_id"])
@@ -313,26 +405,30 @@ async def admin_confirm_add_key(call: CallbackQuery, state: FSMContext):
         info = await KeyService.generate_key(data)
         if info:
             await call.edit_text(
-                text="Ключ успешно добавлен",
-                reply_markup=admin_kb_confirm_add_key()
+                text="Ключ успешно добавлен", reply_markup=admin_kb_confirm_add_key()
             )
     except Exception as e:
         logger.error(f"Ошибка при добавлении ключа из админки {e}")
         await call.edit_text(
-            text="Ошибка при добавлении ключа",
-            reply_markup=admin_kb_confirm_add_key()
+            text="Ошибка при добавлении ключа", reply_markup=admin_kb_confirm_add_key()
         )
 
 
-@router.callback_query(F.data == 'upd_balance_user', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data == "upd_balance_user", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_update_balance(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    msg = await call.message.edit_text(text="input telegram id", reply_markup=admin_cancel_kb())
+    msg = await call.message.edit_text(
+        text="input telegram id", reply_markup=admin_cancel_kb()
+    )
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(UpdateBalance.telegram_id)
 
 
-@router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), UpdateBalance.telegram_id)
+@router.message(
+    F.text, F.from_user.id.in_(settings.ADMINS_LIST), UpdateBalance.telegram_id
+)
 async def admin_get_tg_id(message: Message, state: FSMContext):
     await del_msg(message, state)
     try:
@@ -342,11 +438,16 @@ async def admin_get_tg_id(message: Message, state: FSMContext):
         user = await UserService.find_one_or_none(telegram_id=str(telegram_id))
 
         if user:
-            msg = await message.answer(text="Enter updated balance", reply_markup=admin_cancel_kb())
+            msg = await message.answer(
+                text="Enter updated balance", reply_markup=admin_cancel_kb()
+            )
             await state.update_data(last_msg_id=msg.message_id)
             await state.set_state(UpdateBalance.balance)
         else:
-            msg = await message.answer(text="User not found, enter correct telegram id", reply_markup=admin_cancel_kb())
+            msg = await message.answer(
+                text="User not found, enter correct telegram id",
+                reply_markup=admin_cancel_kb(),
+            )
             await state.update_data(last_msg_id=msg.message_id)
             await state.set_state(UpdateBalance.telegram_id)
         # await del_msg(message, state)
@@ -372,8 +473,7 @@ async def admin_get_balance(message: Message, state: FSMContext):
         )
 
         msg = await message.answer(
-            text=text,
-            reply_markup=admin_kb_confirm_upd_balance()
+            text=text, reply_markup=admin_kb_confirm_upd_balance()
         )
         await state.update_data(last_msg_id=msg.message_id)
         await state.set_state(UpdateBalance.confirm)
@@ -382,40 +482,50 @@ async def admin_get_balance(message: Message, state: FSMContext):
         return
 
 
-@router.callback_query(F.data == 'confirm_upd_balance', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data == "confirm_upd_balance", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_confirm_update_balance(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    await bot.delete_message(chat_id=call.from_user.id, message_id=data['last_msg_id'])
-    del data['last_msg_id']
+    await bot.delete_message(chat_id=call.from_user.id, message_id=data["last_msg_id"])
+    del data["last_msg_id"]
 
     try:
-        info = await UserService.update_balance(telegram_id=str(data['telegram_id']), balance=float(data['balance']))
+        info = await UserService.update_balance(
+            telegram_id=str(data["telegram_id"]), balance=float(data["balance"])
+        )
         if info:
-            await call.message.answer(text="Updated successfully", reply_markup=admin_kb())
+            await call.message.answer(
+                text="Updated successfully", reply_markup=admin_kb()
+            )
     except Exception as e:
         logger.error(f"Error while updating balance in admin panel {e}")
-        await call.message.answer(text="Ошибка при обновлении баланса, попробуйте заново", reply_markup=admin_kb())
+        await call.message.answer(
+            text="Ошибка при обновлении баланса, попробуйте заново",
+            reply_markup=admin_kb(),
+        )
 
 
-@router.callback_query(F.data == 'add_key_user', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data == "add_key_user", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_add_key_user(call: CallbackQuery, state: FSMContext):
     pass
 
 
-@router.callback_query(F.data == 'handler_promo', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data == "handler_promo", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_handler_promo(call: CallbackQuery):
-    await call.message.edit_text(
-        text="Choose option",
-        reply_markup=admin_kb_promo()
-    )
+    await call.message.edit_text(text="Choose option", reply_markup=admin_kb_promo())
 
 
-@router.callback_query(F.data == 'gen_promo', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(F.data == "gen_promo", F.from_user.id.in_(settings.ADMINS_LIST))
 async def admin_gen_promo(call: CallbackQuery, state: FSMContext):
     await state.clear()
     msg = await call.message.edit_text(
         text="Для генерации промокода введите Код активации",
-        reply_markup=admin_cancel_kb()
+        reply_markup=admin_cancel_kb(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -428,8 +538,7 @@ async def admin_get_code(message: Message, state: FSMContext):
     await del_msg(message, state)
 
     msg = await message.answer(
-        text=("Введите количество активаций промокода"),
-        reply_markup=admin_cancel_kb()
+        text=("Введите количество активаций промокода"), reply_markup=admin_cancel_kb()
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -444,8 +553,7 @@ async def admin_get_amount(message: Message, state: FSMContext):
         await state.update_data(count=count)
 
         msg = await message.answer(
-            text="Введите бонус при активации промокода",
-            reply_markup=admin_cancel_kb()
+            text="Введите бонус при активации промокода", reply_markup=admin_cancel_kb()
         )
 
         await state.update_data(last_msg_id=msg.message_id)
@@ -456,7 +564,6 @@ async def admin_get_amount(message: Message, state: FSMContext):
 
 @router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), NewPromo.bonus)
 async def admin_get_bonus(message: Message, state: FSMContext):
-
     try:
         bonus = float(message.text)
         await state.update_data(bonus=bonus)
@@ -471,10 +578,7 @@ async def admin_get_bonus(message: Message, state: FSMContext):
             f"Бонус при активации {data['bonus']}"
         )
 
-        msg = await message.answer(
-            text=text,
-            reply_markup=admin_kb_confirm_gen_promo()
-        )
+        msg = await message.answer(text=text, reply_markup=admin_kb_confirm_gen_promo())
 
         await state.update_data(last_msg_id=msg.message_id)
         await state.set_state(NewPromo.confirm)
@@ -482,49 +586,46 @@ async def admin_get_bonus(message: Message, state: FSMContext):
         msg = await message.answer(text="Введите корректное число")
 
 
-@router.callback_query(F.data == 'confirm_gen_promo', F.from_user.id.in_(settings.ADMINS_LIST), NewPromo.confirm)
+@router.callback_query(
+    F.data == "confirm_gen_promo",
+    F.from_user.id.in_(settings.ADMINS_LIST),
+    NewPromo.confirm,
+)
 async def admin_confirm_get_promo(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     # await bot.delete_message(chat_id=call.from_user.id, message_id=data['last_msg_id'])
-    del data['last_msg_id']
+    del data["last_msg_id"]
 
     try:
         info = await PromocodeService.generate_promocode(data=data)
         if info:
             logger.info("Промокод успешно добавлен")
             await call.message.edit_text(
-                text="Промокод успешно добавлен",
-                reply_markup=admin_kb()
+                text="Промокод успешно добавлен", reply_markup=admin_kb()
             )
     except Exception as e:
         logger.error(f"Ошибка при добавлении промокода {e}")
         await call.message.edit_text(
-            text="Ошибка при добавлении промокода",
-            reply_markup=admin_kb()
+            text="Ошибка при добавлении промокода", reply_markup=admin_kb()
         )
 
 
-@router.callback_query(F.data == 'get_all_promo', F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(
+    F.data == "get_all_promo", F.from_user.id.in_(settings.ADMINS_LIST)
+)
 async def admin_get_all_promo(call: CallbackQuery):
-
     promocodes_info = await PromocodeService.find_all()
 
     if not promocodes_info:
         await call.message.edit_text(
-            text="Нет добавленных промокодов",
-            reply_markup=admin_kb_promo()
+            text="Нет добавленных промокодов", reply_markup=admin_kb_promo()
         )
     else:
-        text = (
-            "Все выпущенные промокоды\n\n"
-        )
+        text = "Все выпущенные промокоды\n\n"
         for promo in promocodes_info:
             text += (
                 f"Код активации {promo.code}\n"
                 f"Осталось активаций {promo.count}\n"
                 f"Бонус пополнения {promo.bonus}\n\n"
             )
-        await call.message.edit_text(
-            text=text,
-            reply_markup=admin_kb_promo()
-        )
+        await call.message.edit_text(text=text, reply_markup=admin_kb_promo())

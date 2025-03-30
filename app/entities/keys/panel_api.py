@@ -8,18 +8,15 @@ from app.config import settings
 
 
 async def open_session(url):
-    '''Открыть сессию с панелью для запросов'''
+    """Открыть сессию с панелью для запросов"""
 
-    data = {
-        "username": settings.VLESS_USERNAME,
-        "password": settings.VLESS_PASSWORD
-    }
+    data = {"username": settings.VLESS_USERNAME, "password": settings.VLESS_PASSWORD}
 
-    path = 'login'
+    path = "login"
     session = aiohttp.ClientSession()
 
     try:
-        async with session.post(url=url+path, json=data, ssl=False) as response:
+        async with session.post(url=url + path, json=data, ssl=False) as response:
             if response.status == 200:
                 data = await response.json()
                 return session, response.cookies
@@ -34,16 +31,17 @@ async def open_session(url):
 
 
 async def get_inbounds(url) -> dict:
-    '''Получить список всех подключений по протоколам'''
+    """Получить список всех подключений по протоколам"""
 
-    path = 'panel/api/inbounds/list'
+    path = "panel/api/inbounds/list"
 
     session, cookies = await open_session(url)
     if session is None:
+        logger.error("Can`t create session while get inbounds")
         return {}
 
     try:
-        async with session.get(url=url+path, cookies=cookies, ssl=False) as response:
+        async with session.get(url=url + path, cookies=cookies, ssl=False) as response:
             if response.status == 200:
                 data = await response.json()
                 logger.info("Data from panel got successfully")
@@ -81,40 +79,43 @@ async def get_inbounds(url) -> dict:
 
 
 async def add_client(data, url):
-    '''Добавить нового клиента'''
+    """Добавить нового клиента"""
 
-    path = 'panel/api/inbounds/addClient'
+    path = "panel/api/inbounds/addClient"
 
     payload = {
         "id": 1,
-        "settings": json.dumps({
-            "clients": [
-                {
-                    "id": data.get('id'),
-                    "flow": "xtls-rprx-vision",
-                    "email": data.get('email'),
-                    "limitIp": data.get('limitIp'),
-                    "totalGB": data.get('totalGB'),
-                    "expiryTime": data.get('expiryTime'),
-                    "enable": True,
-                    "tgId": "",
-                    "subId": str(uuid.uuid4()).replace('-', '')[:16],
-                    "reset": 0
-                }
-            ]
-        })
+        "settings": json.dumps(
+            {
+                "clients": [
+                    {
+                        "id": data.get("id"),
+                        "flow": "xtls-rprx-vision",
+                        "email": data.get("email"),
+                        "limitIp": data.get("limitIp"),
+                        "totalGB": data.get("totalGB"),
+                        "expiryTime": data.get("expiryTime"),
+                        "enable": True,
+                        "tgId": "",
+                        "subId": str(uuid.uuid4()).replace("-", "")[:16],
+                        "reset": 0,
+                    }
+                ]
+            }
+        ),
     }
 
-    headers = {
-        'Accept': 'application/json'
-    }
+    headers = {"Accept": "application/json"}
 
     session, cookies = await open_session(url)
     if session is None:
+        logger.error("Can`t create session while adding client")
         return {}
 
     try:
-        async with session.post(url=url+path, headers=headers, cookies=cookies, data=payload, ssl=False) as response:
+        async with session.post(
+            url=url + path, headers=headers, cookies=cookies, data=payload, ssl=False
+        ) as response:
             if response.status == 200:
                 info = await response.json()
                 logger.info(f"New client added to panel {data.get('email')}")
@@ -130,28 +131,84 @@ async def add_client(data, url):
         return {}
 
 
-async def update_inbound(session, id, payload, url):
-    '''Обновить информацию о пользователе по ID'''
+async def update_client(url, data, uuid):
+    """""Обновить информацию о клиенте по ID""" ""
 
-    path = 'panel/api/inbounds/updateClient/'
+    path = f"panel/api/inbounds/updateClient/{uuid}"
 
-    headers = {
-        'Accept': 'application/json'
+    payload = {
+        "id": 1,
+        "settings": json.dumps(
+            {
+                "clients": [
+                    {
+                        "id": data.get("id_panel"),
+                        "flow": "xtls-rprx-vision",
+                        "alterId": 0,
+                        "email": data.get("email"),
+                        "limitIp": data.get("limitIp"),
+                        "totalGB": data.get("totalGb"),
+                        "expiryTime": data.get("expiryTime"),
+                        "enable": data.get("enable"),
+                        "tgId": "",
+                        "subId": "",
+                    }
+                ]
+            }
+        ),
     }
 
-    session = await open_session()
+    headers = {"Accept": "application/json"}
+
+    session, cookies = await open_session(url)
     if session is None:
+        logger.error("Can`t create session while updating client")
         return {}
-    data = {}
+
     try:
-        async with session.post(url=url+path+id, headers=headers, json=payload, ssl=False) as response:
+        async with session.post(
+            url=url + path, headers=headers, cookies=cookies, data=payload, ssl=False
+        ) as response:
             if response.status == 200:
-                data = await response.json()
-                return data
+                info = await response.json()
+                logger.info(f"Client updated with new payload {payload}")
+                await session.close()
+                return info
             else:
-                logger.warning(
-                    f"Failed to update client inbound {response.status}")
+                logger.warning(f"Failed to update client inbound {response.status}")
+                await session.close()
                 return {}
     except Exception as e:
         logger.error(f"Error update client inbound {e}")
+        await session.close()
+        return {}
+
+
+async def delete_client(url, inboundId: str, uuid: str):
+    """Удалить существующего клиента"""
+
+    path = f"panel/api/inbounds/{inboundId}/delClient/{uuid}"
+
+    headers = {"Accept": "application/json"}
+
+    session, cookies = await open_session(url)
+    if session is None:
+        logger.error("Can`t create session while delete client")
+        return {}
+
+    try:
+        async with session.post(
+            url=url + path, headers=headers, cookies=cookies, ssl=False
+        ) as response:
+            if response.status == 200:
+                info = await response.json()
+                logger.info(f"Client {uuid} delete successfully from panel")
+                await session.close()
+                return info
+            else:
+                logger.warning(f"Failed to delete client from panel {uuid}")
+                await session.close()
+                return {}
+    except Exception as e:
+        logger.error(f"Error while deleting client {e}")
         return {}

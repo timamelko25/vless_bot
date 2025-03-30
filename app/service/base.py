@@ -1,4 +1,4 @@
-from sqlalchemy import update
+from sqlalchemy import update as sqlalchemy_update, delete as sqlalchemy_delete
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import class_mapper
@@ -45,7 +45,7 @@ class BaseService:
     @connection()
     async def update(cls, session: AsyncSession, filter_by: dict, **values):
         query = (
-            update(cls.model)
+            sqlalchemy_update(cls.model)
             .where(*[getattr(cls.model, k) == v for k, v in filter_by.items()])
             .values(**values)
             .execution_options(synchronize_session="fetch")
@@ -53,6 +53,18 @@ class BaseService:
         result = await session.execute(query)
         await session.flush()
         return result.rowcount
+    
+    @classmethod
+    @connection()
+    async def delete(cls, session: AsyncSession, delete_all: bool = False, **filter_by):
+        if not delete_all and not filter_by:
+            raise ValueError("Enter at least 1 parameter")
+        
+        query = sqlalchemy_delete(cls.model).filter_by(**filter_by)
+        result = await session.execute(query)
+        await session.flush()
+        return result.rowcount
+        
 
     def to_dict(self) -> dict:
         columns = class_mapper(self.__class__).columns

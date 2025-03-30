@@ -17,8 +17,8 @@ dependencies = [
     "pydantic-settings==2.7.1",
     "python-decouple==3.8",
     "redis==5.2.1",
-    "requests==2.32.3",
     "sqlalchemy==2.0.37",
     "sqlalchemy-utils==0.41.2",
+    "syncpg>=1.1.3",
     "uvicorn==0.34.0",
 ]

@@ -28,10 +28,16 @@ def admin_kb_user() -> InlineKeyboardMarkup:
 def admin_kb_server() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="➕ Добавить сервер", callback_data='add_server_admin')
-    kb.button(text="🗑 Удалить сервер", callback_data='del_server')
+    kb.button(text="Все сервера", callback_data='get_servers_admin')
     kb.button(text="⚙️ Панель администратора", callback_data='admin_panel')
     kb.button(text="🏠 Главная страница", callback_data='home')
     kb.adjust(2, 1)
+    return kb.as_markup()
+
+def admin_kb_del_server(name) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Удалить сервер", callback_data=f'del_server_admin:{name}')
+    kb.adjust(1)
     return kb.as_markup()
 
 
@@ -41,6 +47,14 @@ def admin_kb_key() -> InlineKeyboardMarkup:
     kb.button(text="🔑 Сгенерировать ключ", callback_data='generate_key_admin')
     kb.button(text="⚙️ Панель администратора", callback_data='admin_panel')
     kb.button(text="🏠 Главная страница", callback_data='home')
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def admin_kb_key_options(key_id: str) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Сбросить время жизни", callback_data=f"reset_param:{key_id}:expiryTime")
+    kb.button(text="Удалить ключ", callback_data=f"reset_param:{key_id}:delete")
     kb.adjust(1)
     return kb.as_markup()
 

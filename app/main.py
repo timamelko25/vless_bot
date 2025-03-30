@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 import uvicorn
 
-from app.config import bot, dp, settings, broker
+from app.config import bot, dp, settings, broker, scheduler
 from app.entities.users.router_start import router as user_router_start
 from app.entities.users.router_pay import router as user_router_pay
 from app.entities.keys.router_key_get import router as key_router_get
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
     logger.info("Bot getting starting")
     await broker.start()
     await start_bot()
-    # enable broker, scheduler + job
+    scheduler.start()
     webhook_url = settings.get_webhook()
     await bot.set_webhook(
         url=webhook_url,
@@ -63,8 +63,8 @@ async def lifespan(app: FastAPI):
     yield
     logger.info("Bot getting stopped")
     await broker.close()
+    scheduler.shutdown()
     await stop_bot()
-    # close broker, scheduler
 
 app = FastAPI(lifespan=lifespan)
 

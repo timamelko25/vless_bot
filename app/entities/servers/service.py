@@ -17,3 +17,10 @@ class ServerService(BaseService):
         info = [server.name for server in servers]
 
         return info
+
+    @classmethod
+    @connection()
+    async def delete_server(cls, session: AsyncSession, server_name: str):
+        info = await cls.delete(name=server_name)
+        await session.flush()
+        return info

@@ -11,3 +11,4 @@ class Promocode(Base):
     count: Mapped[int] = mapped_column(nullable=False, unique=False, default=0)
     bonus: Mapped[float] = mapped_column(
         nullable=False, unique=False, default=0)
+    
