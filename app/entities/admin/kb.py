@@ -9,6 +9,7 @@ def admin_kb() -> InlineKeyboardMarkup:
     kb.button(text="🖥 Серверы", callback_data='handler_server')
     kb.button(text="🔑 Ключи", callback_data='handler_key')
     kb.button(text="Промокоды", callback_data='handler_promo')
+    kb.button(text="Рассылка сообщений", callback_data='admin_spam_messages')
     kb.button(text="🏠 Главная страница", callback_data='home')
     kb.adjust(1)
     return kb.as_markup()
@@ -68,6 +69,19 @@ def admin_kb_promo() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+def admin_kb_messages() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Рассылка сообщений пользователям",
+              callback_data='spam_admins')
+    kb.button(text="Рассылка сообщений администраторам",
+              callback_data='spam_users')
+    kb.button(text="Отправка сообщений пользователю",
+              callback_data='send_message')
+    kb.button(text="❌ Отмена", callback_data='admin_panel')
+    kb.adjust(1)
+    return kb.as_markup()
+
+
 def admin_kb_current_key() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="🗑 Удалить ключ", callback_data='del_key_admin')
@@ -105,6 +119,14 @@ def admin_kb_confirm_upd_balance() -> InlineKeyboardMarkup:
 def admin_kb_confirm_gen_promo() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="✅ Подтвердить", callback_data='confirm_gen_promo')
+    kb.button(text="❌ Отмена", callback_data='admin_panel')
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def admin_kb_confirm_spam_admins() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✅ Подтвердить", callback_data='confirm_spam')
     kb.button(text="❌ Отмена", callback_data='admin_panel')
     kb.adjust(1)
     return kb.as_markup()

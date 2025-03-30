@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import CallbackQuery, Message
 
-from app.config import settings, bot
+from app.config import settings, bot, broker
 from app.utils.utils import del_msg
 from app.entities.keys.panel_api import get_inbounds
 from app.entities.users.service import UserService
@@ -18,7 +18,6 @@ from .kb import (
     admin_kb,
     admin_kb_confirm_add_key,
     admin_kb_del_server,
-    admin_kb_key_options,
     admin_kb_promo,
     admin_kb_server,
     admin_kb_user,
@@ -59,6 +58,12 @@ class NewPromo(StatesGroup):
     count = State()
     bonus = State()
     confirm = State()
+
+
+class SpamMessage(StatesGroup):
+    spam_message = State()
+    confirm = State()
+    telegram_id = State()
 
 
 @router.callback_query(F.data == "cancel", F.from_user.id.in_(settings.ADMINS_LIST))
@@ -629,3 +634,112 @@ async def admin_get_all_promo(call: CallbackQuery):
                 f"Бонус пополнения {promo.bonus}\n\n"
             )
         await call.message.edit_text(text=text, reply_markup=admin_kb_promo())
+
+
+@router.callback_query(
+    F.data == "admin_spam_messages", F.from_user.id.in_(settings.ADMINS_LIST)
+)
+async def admin_start_spam(call: CallbackQuery, state: FSMContext):
+    await state.clear()
+
+    msg = await call.message.answer(
+        text="Введите сообщение для рассылки сообщений\n(поддерживается упрощенное html форматирование)",
+        reply_markup=admin_cancel_kb(),
+    )
+
+    await state.update_data(last_msg_id=msg.message_id)
+    await state.set_state(SpamMessage.spam_message)
+
+
+@router.message(
+    F.text, F.from_user.id.in_(settings.ADMINS_LIST), SpamMessage.spam_message
+)
+async def admin_get_message(message: Message, state: FSMContext):
+    await state.update_data(spam_message=message.text)
+    await del_msg(message, state)
+
+    text = f"Проверьте введенные данные\n\n{message.text}"
+
+    msg = await message.answer(text=text, reply_markup=admin_kb_confirm_spam_admins())
+
+    await state.update_data(last_msg_id=msg.message_id)
+    await state.set_state(SpamMessage.confirm)
+
+
+@router.callback_query(
+    F.data == "confirm_spam",
+    F.from_user.id.in_(settings.ADMINS_LIST),
+    SpamMessage.confirm,
+)
+async def admin_confirm_spam_admins(call: CallbackQuery, state: FSMContext):
+    await call.message.edit_text(
+        text="Выберете кому произвести отправку сообщений",
+        reply_markup=admin_kb_messages(),
+    )
+
+
+@router.callback_query(F.data == "spam_admins")
+async def admin_spam_admins(call: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    try:
+        await broker.publish(data["message"], "admin_msg")
+        logger.info("Генерация рассылки сообщений администраторам")
+        await call.message.edit_text(
+            text="Сообщения успешно разосланы", reply_markup=admin_kb()
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при генерации отправки сообщения администраторам {e}")
+
+
+@router.callback_query(F.data == "spam_users", F.from_user.id.in_(settings.ADMINS_LIST))
+async def admin_spam_admins(call: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    try:
+        await broker.publish(data["message"], "users_msg")
+        logger.info("Генерация рассылки сообщений пользователям")
+        await call.message.edit_text(
+            text="Сообщения успешно разосланы", reply_markup=admin_kb()
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при генерации отправки сообщений пользователям {e}")
+
+
+@router.callback_query(
+    F.data == "send_message", F.from_user.id.in_(settings.ADMINS_LIST)
+)
+async def admin_send_message(call: CallbackQuery, state: FSMContext):
+    msg = await call.message.edit_text(
+        text="Введите ID пользователя", reply_markup=admin_cancel_kb()
+    )
+
+    await state.update_data(last_msg_id=msg.message_id)
+    await state.set_state(SpamMessage.telegram_id)
+
+
+@router.message(
+    F.text, F.from_user.id.in_(settings.ADMINS_LIST), SpamMessage.telegram_id
+)
+async def admin_spam_get_telegram_id(message: Message, state: FSMContext):
+    await del_msg(message, state)
+    try:
+        user_id = message.text
+        user = await UserService.find_one_or_none(telegram_id=user_id)
+        if user:
+            await state.update_data(telegram_id=user_id)
+
+            data = await state.get_data()
+
+            msg = {
+                "user_id": data["telegram_id"],
+                "msg": data["spam_message"],
+            }
+
+            await broker.publish(msg, "send_msg")
+            logger.info("Генерация отправки сообщения")
+        else:
+            msg = await message.answer(
+                text="Пользователь не найден, введите другой ID",
+                reply_markup=admin_cancel_kb(),
+            )
+    except Exception as e:
+        logger.error(f"Ошибка при генерации отправки сообщения пользователю {e}")
