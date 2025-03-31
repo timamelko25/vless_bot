@@ -233,8 +233,8 @@ async def admin_get_all_keys(call: CallbackQuery):
                 f"<b>ID ключа:</b> <code>{key.id_panel}</code>\n"
                 f"<b>Email пользователя:</b> <code>{key.email}</code>\n"
                 f"<b>Остаток жизни:</b> <code>{date}</code>\n"
-                f"Значение ключа {key.value}"
-                f"<b>Статус ключа:</b> {'✅ Активен' if key.status else '❌ Отключен'}\n"
+                f"Значение ключа {key.value}\n"
+                f"<b>Статус ключа:</b> {'✅ Активен' if key.status else '❌ Отключен'}"
             )
             await call.message.answer(
                 text=text,
@@ -310,9 +310,10 @@ async def admin_generate_key(call: CallbackQuery, state: FSMContext):
 
 @router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), NewKey.telegram_id)
 async def admin_get_telegram_id(message: Message, state: FSMContext):
-    await state.update_data(telegram_id=message.text)
+    telegram_id = str(message.from_user.id) if message.text == "0" else message.text
+    await state.update_data(telegram_id=telegram_id)
     await del_msg(message, state)
-
+    # добавить проверку пользователя
     msg = await message.answer(
         text="Для генерации ключа введите email (название):\n 0 для случайного имени",
         reply_markup=admin_cancel_kb(),
@@ -337,7 +338,7 @@ async def admin_get_email_keygen(message: Message, state: FSMContext):
 
 @router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), NewKey.limitIp)
 async def admin_get_limit(message: Message, state: FSMContext):
-    await state.update_data(limitIp=message.text)
+    await state.update_data(limitIp=int(message.text))
     await del_msg(message, state)
 
     msg = await message.answer(
@@ -351,7 +352,7 @@ async def admin_get_limit(message: Message, state: FSMContext):
 
 @router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), NewKey.totalGB)
 async def admin_get_totalgb(message: Message, state: FSMContext):
-    await state.update_data(totalGB=message.text)
+    await state.update_data(totalGB=int(message.text))
     await del_msg(message, state)
 
     servers = await ServerService.get_servers_list()
@@ -361,19 +362,15 @@ async def admin_get_totalgb(message: Message, state: FSMContext):
     )
 
     await state.update_data(last_msg_id=msg.message_id)
-    await state.set_state(NewKey.server)
 
 
-@router.message(F.data.startswith("admin_confirm:"), F.from_user.id.in_(settings.ADMINS_LIST))
+@router.callback_query(F.data.startswith("admin_confirm:"), F.from_user.id.in_(settings.ADMINS_LIST))
 async def admin_get_server(call: CallbackQuery, state: FSMContext):
     _, server_name = call.data.split(":", 1)
+    await state.update_data(server=server_name)
     
     data = await state.get_data()
     await bot.delete_message(chat_id=call.from_user.id, message_id=data['last_msg_id'])
-    
-    await state.update_data(server=server_name)
-
-    # добавить поиск сервера в бд если нет то ввести еще раз
     msg = await call.message.answer(
         text="Введите дату действия ключа в формате (год-число-месяц)\n 0 - неограниченное время пользования",
         reply_markup=admin_cancel_kb(),
@@ -386,23 +383,29 @@ async def admin_get_server(call: CallbackQuery, state: FSMContext):
 @router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), NewKey.expiryTime)
 async def admin_get_email(message: Message, state: FSMContext):
     date = message.text
-    expiryTime = 0 if date == 0 else date.timestamp() * 1000
+    
+    if date == "0":
+        expiryTime = "0"
+    else:
+        date_obj = datetime.strptime(date, "%Y-%d-%m") 
+        expiryTime = str(date_obj.timestamp() * 1000)
+    
     await state.update_data(expiryTime=expiryTime)
     await del_msg(message, state)
 
     data = await state.get_data()
     email = (
-        str(uuid.uuid4()).replace("-", "")[:10] if data["email"] == 0 else data["email"]
+        str(uuid.uuid4()).replace("-", "")[:10] if data["email"] == "0" else data["email"]
     )
 
     text = (
         f"Проверьте введенные поля\n"
         f"ID пользователя {data['telegram_id']}\n"
         f"Имя ключа {email}\n"
-        f"Сервер {data['server']}"
-        f"Число устройств {data['limitIp']}\n"
-        f"Лимит трафика {data['totalGB']}\n"
-        f"Время действия {date}\n"
+        f"Сервер {data['server']}\n"
+        f"Число устройств {"Безлимит" if data['limitIp'] == 0 else data['limitIp']}\n"
+        f"Лимит трафика {"Безлимит" if data['totalGB'] == 0 else data['totalGB']}\n"
+        f"Время действия {"Безлимит" if date == "0" else date}\n"
     )
     msg = await message.answer(text=text, reply_markup=admin_kb_confirm_add_key())
 
@@ -415,19 +418,27 @@ async def admin_get_email(message: Message, state: FSMContext):
 )
 async def admin_confirm_add_key(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
+    data['id'] = str(uuid.uuid4())
     # await bot.delete_message(chat_id=call.from_user.id, message_id=data["last_msg_id"])
+
+    telegram_id = data['telegram_id']
+    
     del data["last_msg_id"]
 
     try:
-        info = await KeyService.generate_key(data)
+        info = await UserService.create_key(
+            telegram_id=telegram_id,
+            server_name=data['server'],
+            data=data
+            )
         if info:
-            await call.edit_text(
-                text="Ключ успешно добавлен", reply_markup=admin_kb_confirm_add_key()
+            await call.message.edit_text(
+                text="Ключ успешно добавлен", reply_markup=admin_kb_key()
             )
     except Exception as e:
         logger.error(f"Ошибка при добавлении ключа из админки {e}")
-        await call.edit_text(
-            text="Ошибка при добавлении ключа", reply_markup=admin_kb_confirm_add_key()
+        await call.message.edit_text(
+            text="Ошибка при добавлении ключа", reply_markup=admin_kb_key()
         )
 
 
