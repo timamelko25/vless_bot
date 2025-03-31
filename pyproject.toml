@@ -14,6 +14,7 @@ dependencies = [
     "fastapi==0.115.11",
     "faststream==0.5.35",
     "loguru==0.7.3",
+    "psycopg2-binary>=2.9.10",
     "pydantic-settings==2.7.1",
     "python-decouple==3.8",
     "redis==5.2.1",

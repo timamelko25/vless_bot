@@ -17,7 +17,10 @@ from app.entities.promocodes.service import PromocodeService
 from .kb import (
     admin_kb,
     admin_kb_confirm_add_key,
+    admin_kb_confirm_spam_admins,
     admin_kb_del_server,
+    admin_kb_key_options,
+    admin_kb_messages,
     admin_kb_promo,
     admin_kb_server,
     admin_kb_user,
@@ -26,6 +29,7 @@ from .kb import (
     admin_kb_confirm_upd_balance,
     admin_kb_confirm_add_server,
     admin_kb_confirm_gen_promo,
+    admin_servers_inline_kb,
 )
 
 router = Router()
@@ -130,8 +134,8 @@ async def admin_del_server_confirm(call: CallbackQuery):
     server_name = call.data.split(":")[1]
     await ServerService.delete_server(server_name=server_name)
 
-    await call.message.answer(
-        text="Сервер успешно удален", reply_markup=admin_kb_server()
+    await call.message.edit_text(
+        text="Сервер успешно удален"
     )
 
 
@@ -349,21 +353,28 @@ async def admin_get_limit(message: Message, state: FSMContext):
 async def admin_get_totalgb(message: Message, state: FSMContext):
     await state.update_data(totalGB=message.text)
     await del_msg(message, state)
-    # сделать reply kb для выбора сервера
+
+    servers = await ServerService.get_servers_list()
+
     msg = await message.answer(
-        text="Введите название сервера", reply_markup=admin_cancel_kb()
+        text="Введите название сервера", reply_markup=admin_servers_inline_kb(servers)
     )
 
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(NewKey.server)
 
 
-@router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), NewKey.server)
-async def admin_get_server(message: Message, state: FSMContext):
-    await state.update_data(server=message.text)
-    await del_msg(message, state)
+@router.message(F.data.startswith("admin_confirm:"), F.from_user.id.in_(settings.ADMINS_LIST))
+async def admin_get_server(call: CallbackQuery, state: FSMContext):
+    _, server_name = call.data.split(":", 1)
+    
+    data = await state.get_data()
+    await bot.delete_message(chat_id=call.from_user.id, message_id=data['last_msg_id'])
+    
+    await state.update_data(server=server_name)
+
     # добавить поиск сервера в бд если нет то ввести еще раз
-    msg = await message.answer(
+    msg = await call.message.answer(
         text="Введите дату действия ключа в формате (год-число-месяц)\n 0 - неограниченное время пользования",
         reply_markup=admin_cancel_kb(),
     )
@@ -388,6 +399,7 @@ async def admin_get_email(message: Message, state: FSMContext):
         f"Проверьте введенные поля\n"
         f"ID пользователя {data['telegram_id']}\n"
         f"Имя ключа {email}\n"
+        f"Сервер {data['server']}"
         f"Число устройств {data['limitIp']}\n"
         f"Лимит трафика {data['totalGB']}\n"
         f"Время действия {date}\n"
@@ -642,7 +654,7 @@ async def admin_get_all_promo(call: CallbackQuery):
 async def admin_start_spam(call: CallbackQuery, state: FSMContext):
     await state.clear()
 
-    msg = await call.message.answer(
+    msg = await call.message.edit_text(
         text="Введите сообщение для рассылки сообщений\n(поддерживается упрощенное html форматирование)",
         reply_markup=admin_cancel_kb(),
     )
@@ -682,7 +694,7 @@ async def admin_confirm_spam_admins(call: CallbackQuery, state: FSMContext):
 async def admin_spam_admins(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     try:
-        await broker.publish(data["message"], "admin_msg")
+        await broker.publish(data["spam_message"], "admin_msg")
         logger.info("Генерация рассылки сообщений администраторам")
         await call.message.edit_text(
             text="Сообщения успешно разосланы", reply_markup=admin_kb()
@@ -692,10 +704,10 @@ async def admin_spam_admins(call: CallbackQuery, state: FSMContext):
 
 
 @router.callback_query(F.data == "spam_users", F.from_user.id.in_(settings.ADMINS_LIST))
-async def admin_spam_admins(call: CallbackQuery, state: FSMContext):
+async def admin_spam_users(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     try:
-        await broker.publish(data["message"], "users_msg")
+        await broker.publish(data["spam_message"], "users_msg")
         logger.info("Генерация рассылки сообщений пользователям")
         await call.message.edit_text(
             text="Сообщения успешно разосланы", reply_markup=admin_kb()

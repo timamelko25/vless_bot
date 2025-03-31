@@ -1,3 +1,5 @@
+import traceback
+
 from loguru import logger
 from aiogram.types import BotCommand, BotCommandScopeDefault, Update
 from fastapi import FastAPI, Request
@@ -15,14 +17,13 @@ from app.entities import *
 
 async def set_commands():
     commands = [
-        BotCommand(command='start', description='Main Menu'),
-        BotCommand(command='profile', description='Profile'),
+        BotCommand(command="start", description="Main Menu"),
+        BotCommand(command="profile", description="Profile"),
     ]
     await bot.set_my_commands(commands, BotCommandScopeDefault())
 
 
 async def start_bot():
-
     await set_commands()
     dp.include_router(user_router_start)
     dp.include_router(user_router_pay)
@@ -30,19 +31,13 @@ async def start_bot():
     dp.include_router(admin_router)
 
     for admin_id in settings.ADMINS_LIST:
-        try:
-            await bot.send_message(admin_id, 'Bot started 🤯+💀')
-        except:
-            logger.error("Error to send start message")
+        await bot.send_message(admin_id, "Bot started 🤯+💀")
     logger.info("Bot Started")
 
 
 async def stop_bot():
-    try:
-        for admin_id in settings.ADMINS_LIST:
-            await bot.send_message(admin_id, '︻デ══━一💥  Bot dead ')
-    except:
-        logger.error("Error to send dead message")
+    for admin_id in settings.ADMINS_LIST:
+        await bot.send_message(admin_id, "︻デ══━一💥  Bot dead ")
     await bot.delete_webhook()
     logger.error("Bot stopped")
 
@@ -57,7 +52,7 @@ async def lifespan(app: FastAPI):
     await bot.set_webhook(
         url=webhook_url,
         allowed_updates=dp.resolve_used_update_types(),
-        drop_pending_updates=True
+        drop_pending_updates=True,
     )
     logger.success(f"Webhook set {webhook_url}")
     yield
@@ -65,6 +60,7 @@ async def lifespan(app: FastAPI):
     await broker.close()
     scheduler.shutdown()
     await stop_bot()
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -80,7 +76,8 @@ async def webhook(request: Request) -> None:
         await dp.feed_update(bot, update)
         logger.info("Обновление успешно обработано.")
     except Exception as e:
-        logger.error(f"Ошибка при обработке обновления с вебхука: {e}")
+        tb_str = traceback.format_exc()
+        logger.error(f"Ошибка при обработке обновления с вебхука: {e}\n {tb_str}")
 
 
 @app.get("/test")

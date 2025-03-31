@@ -22,7 +22,7 @@ class User(Base):
 
     description: Mapped[str] = mapped_column(nullable=True)
 
-    keys: Mapped[List['Key']] = relationship( # type: ignore
+    keys: Mapped[List['Key']] = relationship( # type: ignore  # noqa: F821
         "Key",
         back_populates='user',
         lazy='selectin',

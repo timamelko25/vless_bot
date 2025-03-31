@@ -1,3 +1,4 @@
+from typing import List
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -72,9 +73,9 @@ def admin_kb_promo() -> InlineKeyboardMarkup:
 def admin_kb_messages() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="Рассылка сообщений пользователям",
-              callback_data='spam_admins')
-    kb.button(text="Рассылка сообщений администраторам",
               callback_data='spam_users')
+    kb.button(text="Рассылка сообщений администраторам",
+              callback_data='spam_admins')
     kb.button(text="Отправка сообщений пользователю",
               callback_data='send_message')
     kb.button(text="❌ Отмена", callback_data='admin_panel')
@@ -134,6 +135,15 @@ def admin_kb_confirm_spam_admins() -> InlineKeyboardMarkup:
 
 def admin_cancel_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
+    kb.button(text="❌ Отмена", callback_data='cancel')
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def admin_servers_inline_kb(servers: List[str]) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    for server in servers:
+        kb.button(text=f"🌐 {server}", callback_data=f"admin_confirm:{server}")
     kb.button(text="❌ Отмена", callback_data='cancel')
     kb.adjust(1)
     return kb.as_markup()

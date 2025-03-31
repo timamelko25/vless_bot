@@ -31,12 +31,17 @@ class KeyService(BaseService):
 
         key = info.get("obj")
         stream_settings = key[0].get("streamSettings", {})
-        stream_settings = json.loads(stream_settings)
-        externalProxy = stream_settings.get("externalProxy")
-        dest = externalProxy[0].get("dest")
+        stream_settings = json.loads(stream_settings) 
+        
+        start = len("https://")
+        end = server.domain.find(":8443")
+        dest = server.domain[start:end]
+        
         type = stream_settings.get("network")
         security = stream_settings.get("security")
         realitySettings = stream_settings.get("realitySettings", {})
+        
+        
         serverName = realitySettings.get("serverNames")
         shortIds = realitySettings.get("shortIds")
         settings_panel = realitySettings.get("settings", {})

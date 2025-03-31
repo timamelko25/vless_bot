@@ -10,6 +10,9 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.client.default import DefaultBotProperties
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy_utils import create_database, database_exists
 
 
 class Settings(BaseSettings):
@@ -23,8 +26,12 @@ class Settings(BaseSettings):
     PG_PASSWORD: str
     PG_HOST: str
     PG_PORT: int
-    PG_JOBS_PORT: int
     PG_NAME: str
+
+    PG_JOBS_USER: str
+    PG_JOBS_PASSWORD: str
+    PG_JOBS_HOST: str
+    PG_JOBS_PORT: int
     PG_JOBS_NAME: str
 
     REDIS_USER: str
@@ -46,8 +53,7 @@ class Settings(BaseSettings):
     VLESS_PASSWORD: str
 
     model_config = SettingsConfigDict(
-        env_file=os.path.join(os.path.dirname(
-            os.path.abspath(__file__)), "..", ".env")
+        env_file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
     )
 
     def get_pg_url(self):
@@ -55,11 +61,11 @@ class Settings(BaseSettings):
             f"postgresql+asyncpg://{self.PG_USER}:{self.PG_PASSWORD}@"
             f"{self.PG_HOST}:{self.PG_PORT}/{self.PG_NAME}"
         )
-        
+
     def get_pg_jobs_url(self):
         return (
             f"postgresql://{self.PG_USER}:{self.PG_PASSWORD}@"
-            f"{self.PG_HOST}:{self.PG_JOBS_PORT}/{self.PG_JOBS_NAME}"
+            f"{self.PG_JOBS_HOST}:{self.PG_JOBS_PORT}/{self.PG_JOBS_NAME}"
         )
 
     def get_redis_url(self):
@@ -78,26 +84,43 @@ class Settings(BaseSettings):
         return f"{self.BASE_URL}/webhook"
 
 
-settings = Settings()
+settings = Settings()  # type: ignore
 
 PG_URL = settings.get_pg_url()
+PG_JOBS_URL = settings.get_pg_jobs_url()
 REDIS_URL = settings.get_redis_url()
 
 bot = Bot(
-    token=settings.BOT_TOKEN,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
 dp = Dispatcher(storage=RedisStorage.from_url(REDIS_URL))
 admins = settings.ADMINS_LIST
 
-log_file_path = os.path.join(os.path.dirname(
-    os.path.abspath(__file__)), "log.txt")
-logger.add(log_file_path, format=settings.FORMAT_LOG,
-           level="INFO", rotation=settings.LOG_ROTATION)
+log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log.txt")
+logger.add(
+    log_file_path,
+    format=settings.FORMAT_LOG,
+    level="INFO",
+    rotation=settings.LOG_ROTATION,
+)
 
 broker = RabbitBroker(url=settings.get_rabbitmq_url())
 
+
+Base_jobs = declarative_base()
+
+
+# jobstore_engine = create_engine(url=PG_JOBS_URL)
+# jobstore_session = sessionmaker(jobstore_engine, expire_on_commit=False)
+
+def init_jobstore_db():
+    """Создание таблицы для APScheduler (если отсутствует)."""
+    if not database_exists(PG_JOBS_URL):
+        create_database(PG_JOBS_URL)
+        logger.info("JobStore database initialized")
+
+
 scheduler = AsyncIOScheduler(
-    jobstores={'default': SQLAlchemyJobStore(url=settings.get_pg_jobs_url())},
-    timezone="Europe/Moscow"
-    )
+    jobstores={"default": SQLAlchemyJobStore(url=settings.get_pg_jobs_url())},
+    timezone="Europe/Moscow",
+)

@@ -187,9 +187,10 @@ async def successful_payment(message: Message, state: FSMContext):
         await message.answer(
             text="Баланс успешно пополнен!", reply_markup=gen_key_inline_kb()
         )
-
-        keys = UserService.find_expiry_keys(telegram_id=srt(message.from_user.id))
+        
+        keys = UserService.find_expiry_keys(telegram_id=str(message.from_user.id))
         # проверить для каждого просроченного ключа сделать списание баланса
+
         if keys:
             current_time = datetime.now(timezone.utc).replace(
                 hour=0, minute=0, second=0, microsecond=0
@@ -216,8 +217,8 @@ async def successful_payment(message: Message, state: FSMContext):
                     f"Ошибка при обновлении подписки на ключ {key.email} у пользователя {user.telegram_id}"
                 )
 
-    except Exception:
-        logger.error("Ошибка при пополнении баланса после получения оплаты")
+    except Exception as e:
+        logger.error(f"Ошибка при пополнении баланса после получения оплаты {e}")
 
 
 @router.message(StateFilter(AddBalance.buying))

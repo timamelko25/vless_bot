@@ -14,3 +14,4 @@ uvicorn==0.34.0
 fastapi==0.115.11
 faststream==0.5.35
 aio_pika==9.5.5
+psycopg2-binary==2.9.10
