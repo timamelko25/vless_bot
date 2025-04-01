@@ -169,10 +169,16 @@ class UserService(BaseService):
     @connection()
     async def get_promocode(cls, session: AsyncSession, telegram_id: str, code: str):
         promocode = await PromocodeService.find_one_or_none(code=code)
+        user = await cls.find_one_or_none(telegram_id=telegram_id)
+        
+        if any(p.id == promocode.id for p in user.promocodes_activate):
+            return False
 
         if promocode.count > 0:
             await cls.update_balance(telegram_id=telegram_id, balance=promocode.bonus)
             info = await PromocodeService.update_count(code=promocode.code)
+            user.promocodes_activate.append(promocode)
+            session.add(user)
             await session.flush()
             return info
 

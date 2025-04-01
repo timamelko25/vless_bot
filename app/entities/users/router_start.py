@@ -164,6 +164,10 @@ async def get_promocode(message: Message, state: FSMContext):
         apply_info = await UserService.get_promocode(
             telegram_id=str(message.from_user.id), code=promocode_info.code
         )
+        
+    if apply_info == False:
+        text = "Промокод уже был активирован :(\nПопробуйте ввести другой для активации"
+        msg = await message.answer(text=text, reply_markup=promocode_inline_kb())
 
     if promocode_info and apply_info:
         text = (
@@ -194,6 +198,7 @@ async def get_all_user_keys(call: CallbackQuery):
             text = (
                 f"Время действия ключа <code>{date}</code>\n"
                 f"Страна действия: <b>{server.name}</b>\n"
+                f"Статус ключа {'✅ Активен' if key.status else '❌ Отключен'}\n"
                 f"Ваш ключ: (нажать на ключ для копирования)\n"
                 f"<code>{key.value}</code>\n\n"
             )

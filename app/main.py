@@ -13,6 +13,7 @@ from app.entities.keys.router_key_get import router as key_router_get
 from app.entities.admin.router import router as admin_router
 from app.broker.router_consumer import router as broker_router
 from app.entities import *
+from app.scheduler.scheduler import subscribe_30_day_expire
 
 
 async def set_commands():
@@ -42,12 +43,32 @@ async def stop_bot():
     logger.error("Bot stopped")
 
 
+async def start_tracking():
+    try:
+        scheduler.add_job(
+            func=subscribe_30_day_expire,
+            trigger="interval",
+            seconds=10,
+            #jobstore="default",
+            id="check_subscription",
+            replace_existing=True,
+            misfire_grace_time=300
+        )
+        if not scheduler.state:
+            scheduler.start()
+            logger.info("Scheduler started")
+            
+        logger.info(f"Active jobs: {scheduler.get_jobs()}")
+    except Exception as e:
+        logger.error(f"Scheduler error: {str(e)}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Bot getting starting")
+    await start_tracking()
     await broker.start()
     await start_bot()
-    scheduler.start()
     webhook_url = settings.get_webhook()
     await bot.set_webhook(
         url=webhook_url,

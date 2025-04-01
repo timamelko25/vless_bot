@@ -105,10 +105,10 @@ async def confirm_add_balance(call: CallbackQuery, state: FSMContext):
             payload=f"{user_info.id}_{data['balance']}",
             provider_token=settings.PROVIDER_TOKEN,
             currency="RUB",
-            need_phone_number=True,
-            send_phone_number_to_provider=True,
-            need_email=True,
-            send_email_to_provider=True,
+            # need_phone_number=True,
+            # send_phone_number_to_provider=True,
+            # need_email=True,
+            # send_email_to_provider=True,
             start_parameter="test",
             prices=[LabeledPrice(label=f"Оплата {price}", amount=int(price) * 100)],
             reply_markup=payment_inline_kb(price),
@@ -187,9 +187,8 @@ async def successful_payment(message: Message, state: FSMContext):
         await message.answer(
             text="Баланс успешно пополнен!", reply_markup=gen_key_inline_kb()
         )
-        
-        keys = UserService.find_expiry_keys(telegram_id=str(message.from_user.id))
-        # проверить для каждого просроченного ключа сделать списание баланса
+
+        keys = await UserService.find_expiry_keys(telegram_id=str(message.from_user.id))
 
         if keys:
             current_time = datetime.now(timezone.utc).replace(
@@ -199,10 +198,10 @@ async def successful_payment(message: Message, state: FSMContext):
             date = int(new_time.timestamp() * 1000)
             for key in keys:
                 data = {
-                    "id": key.id_panel,
+                    "id_panel": key.id_panel,
                     "email": key.email,
                     "limitIp": 3,
-                    "totalGB": 107374182400,
+                    "totalGb": 107374182400,
                     "expiryTime": date,
                     "enable": True,
                 }
@@ -213,9 +212,10 @@ async def successful_payment(message: Message, state: FSMContext):
                     logger.info(
                         f"Пользователь {user.telegram_id} успешно обновил подписку на ключ {key.email} на 30 дней"
                     )
-                logger.error(
-                    f"Ошибка при обновлении подписки на ключ {key.email} у пользователя {user.telegram_id}"
-                )
+                else:
+                    logger.error(
+                        f"Ошибка при обновлении подписки на ключ {key.email} у пользователя {user.telegram_id}"
+                    )
 
     except Exception as e:
         logger.error(f"Ошибка при пополнении баланса после получения оплаты {e}")
