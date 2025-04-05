@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     PROVIDER_TOKEN: str
     ADMINS_LIST: List[int]
-    FORMAT_LOG: str = "{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}"
+    FORMAT_LOG: str = "{time:YYYY-MM-DD at HH:mm:ss} | {level} | {file}:{line} | {message}"
     LOG_ROTATION: str = "10 MB"
 
     PG_USER: str
