@@ -160,8 +160,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  pgdata:
-    driver: local
   pgdata_jobs:
     driver: local
   redisdata:
