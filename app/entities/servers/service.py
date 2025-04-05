@@ -24,7 +24,7 @@ class ServerService(BaseService):
     async def delete_server(cls, session: AsyncSession, server_name: str):
         server = await cls.find_one_or_none(name=server_name)
         await KeyService.delete(server_id=server.id)
-        
+
         info = await cls.delete(name=server_name)
         await session.flush()
         return info

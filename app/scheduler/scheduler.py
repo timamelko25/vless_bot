@@ -6,55 +6,74 @@ from app.config import broker, bot
 from app.entities.keys.service import KeyService
 from app.entities.users.kb import get_key_inline_kb
 from app.entities.users.service import UserService
+from app.entities.keys.schemas import KeyPayloadScheme
+from app.broker.schemas import MessageScheme
 
 
 async def subscribe_30_day_expire():
+    """Automated subscription management for user keys.
+
+    Performs daily checks to:
+    - Send 3-day payment reminders for expiring keys
+    - Auto-renew subscriptions for users with sufficient balance
+    - Disable keys for users with insufficient balance
+
+    Handles all active users and their keys, operating on Moscow time basis
+    (15:00 Moscow time daily check). Converts time to UTC for processing.
+    """
     users = await UserService.find_all()
-    current_time = datetime.now(timezone.utc).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    date = int(current_time.timestamp() * 1000)
-    three_days_ms = 3 * 24 * 60 * 60 * 1000  # 3 дня в мс
-    tolerance_ms = 6 * 60 * 60 * 1000  # Допустимое отклонение (6 часов) в мс
-    one_day_ms = 24 * 60 * 60 * 1000
+
+    moscow_time = datetime.now(timezone.utc) + timedelta(hours=3)
+    target_moscow_15 = moscow_time.replace(hour=15, minute=0, second=0, microsecond=0)
+    current_time_utc = target_moscow_15 - timedelta(hours=3)
+
     for user in users:
         for key in user.keys:
-            delta = abs(int(key.expires_at) * 1000 - date)
-            if three_days_ms - tolerance_ms <= delta <= three_days_ms + tolerance_ms:
-                await bot.send_message(
-                    chat_id=user.telegram_id,
-                    text=(
+            key_expire_time = datetime.fromtimestamp(
+                int(key.expires_at), tz=timezone.utc
+            )
+            diff = key_expire_time - current_time_utc
+
+            if (
+                timedelta(days=3) - timedelta(hours=7)
+                <= diff
+                <= timedelta(days=3) + timedelta(hours=7)
+            ):
+                msg = MessageScheme(
+                    message=(
                         "Через 3 дня будет списана сумма за ключи\n"
                         "Проверьте сумму баланса для оплаты ключа\n"
                         "Иначе ключ будет деактивирован до пополнения баланса"
                     ),
-                    reply_markup=get_key_inline_kb(),
+                    telegram_id=user.telegram_id,
+                    keyboard=get_key_inline_kb(),
                 )
 
-            elif delta < one_day_ms:
+            elif diff <= timedelta(days=1):
                 if user.balance >= 150.0:
                     await UserService.update_balance(
                         telegram_id=user.telegram_id, balance=-150.0
                     )
 
-                    new_time = current_time + timedelta(days=30)
+                    new_time = current_time_utc + timedelta(days=30)
                     date = int(new_time.timestamp() * 1000)
 
-                    data = {
-                        "id_panel": key.id_panel,
-                        "email": key.email,
-                        "limitIp": 3,
-                        "totalGb": 107374182400,
-                        "expiryTime": date,
-                        "enable": True,
-                    }
+                    data = KeyPayloadScheme(
+                        id=key.id_panel,
+                        email=key.email,
+                        limitIp=3,
+                        totalGb=107374182400,
+                        expiryTime=date,
+                        status=True,
+                    )
 
                     info = await KeyService.update_key(data=data, server=key.server)
                     if info:
-                        await bot.send_message(
-                            chat_id=user.telegram_id,
-                            text=f"Успешно оплачен ключ {key.email}",
+                        msg = MessageScheme(
+                            message=f"Успешно оплачен ключ {key.email}",
+                            telegram_id=user.telegram_id,
                         )
+                        await broker.publish(msg, "send_msg")
                         logger.info(
                             f"Пользователь {user.telegram_id} успешно обновил подписку на ключ {key.email} на 30 дней"
                         )
@@ -64,21 +83,21 @@ async def subscribe_30_day_expire():
                         )
 
                 elif user.balance < 150:
-                    data = {
-                        "id_panel": key.id_panel,
-                        "email": key.email,
-                        "limitIp": 3,
-                        "totalGb": 107374182400,
-                        "expiryTime": None,
-                        "enable": False,
-                    }
+                    data = KeyPayloadScheme(
+                        id=key.id_panel,
+                        email=key.email,
+                        limitIp=3,
+                        totalGb=107374182400,
+                        expiryTime=date,
+                        status=True,
+                    )
 
                     info = await KeyService.update_key(data=data, server=key.server)
                     if info:
-                        await bot.send_message(
-                            chat_id=user.telegram_id,
-                            text=f"Недостаточно средств для оплаты ключа {key.email}"
+                        msg = MessageScheme(
+                            message=f"Недостаточно средств для оплаты ключа {key.email}"
                             "Пополните баланс для возобновления работы ключа",
-                            reply_markup=get_key_inline_kb(),
+                            telegram_id=user.telegram_id,
+                            keyboard=get_key_inline_kb(),
                         )
-
+                        await broker.publish(msg, "send_msg")

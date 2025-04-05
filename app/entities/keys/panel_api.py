@@ -5,6 +5,7 @@ import uuid
 from loguru import logger
 
 from app.config import settings
+from app.entities.keys.schemas import KeyPayloadScheme
 
 
 async def open_session(url):
@@ -30,7 +31,7 @@ async def open_session(url):
         return {}
 
 
-async def get_inbounds(url) -> dict:
+async def get_inbounds(url: str) -> dict:
     """Получить список всех подключений по протоколам"""
 
     path = "panel/api/inbounds/list"
@@ -78,7 +79,7 @@ async def get_inbounds(url) -> dict:
 #         return {}
 
 
-async def add_client(data, url):
+async def add_client(url: str, data: KeyPayloadScheme):
     """Добавить нового клиента"""
 
     path = "panel/api/inbounds/addClient"
@@ -89,12 +90,12 @@ async def add_client(data, url):
             {
                 "clients": [
                     {
-                        "id": data.get("id"),
+                        "id": data.id,
                         "flow": "xtls-rprx-vision",
-                        "email": data.get("email"),
-                        "limitIp": data.get("limitIp"),
-                        "totalGB": data.get("totalGB"),
-                        "expiryTime": data.get("expiryTime"),
+                        "email": data.email,
+                        "limitIp": data.limitIp,
+                        "totalGB": data.totalGb,
+                        "expiryTime": data.expiryTime,
                         "enable": True,
                         "tgId": "",
                         "subId": str(uuid.uuid4()).replace("-", "")[:16],
@@ -131,7 +132,7 @@ async def add_client(data, url):
         return {}
 
 
-async def update_client(url, data, uuid):
+async def update_client(url: str, uuid: str, data: KeyPayloadScheme):
     """""Обновить информацию о клиенте по ID""" ""
 
     path = f"panel/api/inbounds/updateClient/{uuid}"
@@ -142,14 +143,14 @@ async def update_client(url, data, uuid):
             {
                 "clients": [
                     {
-                        "id": data.get("id_panel"),
+                        "id": data.id,
                         "flow": "xtls-rprx-vision",
                         "alterId": 0,
-                        "email": data.get("email"),
-                        "limitIp": data.get("limitIp"),
-                        "totalGB": data.get("totalGb"),
-                        "expiryTime": data.get("expiryTime"),
-                        "enable": data.get("enable"),
+                        "email": data.email,
+                        "limitIp": data.limitIp,
+                        "totalGB": data.totalGb,
+                        "expiryTime": data.expiryTime,
+                        "enable": data.status,
                         "tgId": "",
                         "subId": "",
                     }
@@ -184,7 +185,7 @@ async def update_client(url, data, uuid):
         return {}
 
 
-async def delete_client(url, inboundId: str, uuid: str):
+async def delete_client(url: str, inboundId: str, uuid: str):
     """Удалить существующего клиента"""
 
     path = f"panel/api/inbounds/{inboundId}/delClient/{uuid}"

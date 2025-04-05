@@ -1,4 +1,3 @@
-
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import class_mapper
@@ -7,20 +6,16 @@ from app.database import Base
 
 
 class Key(Base):
-    __tablename__ = 'keys'
+    __tablename__ = "keys"
 
-    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'))
-    user: Mapped["User"] = relationship( # type: ignore
-        "User",
-        back_populates='keys',
-        lazy='selectin'
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    user: Mapped["User"] = relationship(  # type: ignore  # noqa: F821
+        "User", back_populates="keys", lazy="selectin"
     )
 
-    server_id: Mapped[str] = mapped_column(ForeignKey('servers.id'))
-    server: Mapped["Server"] = relationship( # type: ignore
-        "Server",
-        back_populates='keys',
-        lazy='selectin'
+    server_id: Mapped[str] = mapped_column(ForeignKey("servers.id"))
+    server: Mapped["Server"] = relationship(  # type: ignore  # noqa: F821
+        "Server", back_populates="keys", lazy="selectin"
     )
 
     id_panel: Mapped[str]
@@ -30,7 +25,3 @@ class Key(Base):
     status: Mapped[bool] = mapped_column(default=True)
 
     extend_existing = True
-
-    def to_dict(self) -> dict:
-        columns = class_mapper(self.__class__).columns
-        return {column.key: getattr(self, column.key) for column in columns}

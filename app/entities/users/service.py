@@ -11,6 +11,7 @@ from app.entities.servers.models import Server
 from app.service.base import BaseService
 from app.database import connection
 from app.entities.keys.service import KeyService
+from app.entities.keys.schemas import KeyPayloadScheme
 from app.entities.promocodes.service import PromocodeService
 from .models import User
 
@@ -20,7 +21,9 @@ class UserService(BaseService):
 
     @classmethod
     @connection()
-    async def update_balance(cls, session: AsyncSession, telegram_id, balance):
+    async def update_balance(
+        cls, session: AsyncSession, telegram_id: str, balance: float
+    ):
         user = await cls.find_one_or_none(telegram_id=telegram_id)
 
         if not user:
@@ -75,24 +78,24 @@ class UserService(BaseService):
         session: AsyncSession,
         telegram_id: str,
         server_name: str,
-        data: dict = None,
-    ) -> dict:
+        data: KeyPayloadScheme = None,
+    ) -> Dict:
         user = await cls.find_one_or_none(telegram_id=telegram_id)
         server = await ServerService.find_one_or_none(name=server_name)
         if data is None:
-            # получение времени по UNIX timestamp (с 1970 года) в миллисекундах
-            current_time = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            current_time = datetime.now(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
             new_time = current_time + timedelta(days=30)
             date = int(new_time.timestamp() * 1000)
 
-            data = {
-                "id": str(uuid.uuid4()),
-                "email": str(uuid.uuid4()).replace("-", "")[:10],
-                "limitIp": 3,
-                "totalGB": 107374182400,  # 100gb in bytes
-                # для пробного + 3 сделать
-                "expiryTime": str(date),
-            }
+            data = KeyPayloadScheme(
+                id=str(uuid.uuid4()),
+                email=str(uuid.uuid4()).replace("-", "")[:10],
+                limitIp=3,
+                totalGb=107374182400,
+                expiryTime=str(date),
+            )
 
         info = await KeyService.generate_key(data, server)
 
@@ -125,8 +128,8 @@ class UserService(BaseService):
         session: AsyncSession,
         telegram_id: str,
         server_name: str,
-        data: Dict[str, str],
-    ):
+        data: KeyPayloadScheme,
+    ) -> bool:
         user = cls.find_one_or_none(telegram_id=telegram_id)
         server = ServerService.find_one_or_none(name=server_name)
 
@@ -141,11 +144,13 @@ class UserService(BaseService):
     @connection()
     async def delete_key(
         cls, session: AsyncSession, telegram_id: str, server_name: str, key_id: str
-    ):
+    ) -> bool:
         user = await cls.find_one_or_none(telegram_id=telegram_id)
         server = await ServerService.find_one_or_none(name=server_name)
 
-        info = await KeyService.delete_key(inboundId=1, uuid=key_id, server=server)
+        info = await KeyService.delete_key(
+            inboundId=1, uuid=key_id, server=server
+        )  # TODO сделать выбор среди инбаундов
         if info:
             logger.info(
                 f"User {user.telegram_id} successfully delete key {user.key.email}"
@@ -170,7 +175,7 @@ class UserService(BaseService):
     async def get_promocode(cls, session: AsyncSession, telegram_id: str, code: str):
         promocode = await PromocodeService.find_one_or_none(code=code)
         user = await cls.find_one_or_none(telegram_id=telegram_id)
-        
+
         if any(p.id == promocode.id for p in user.promocodes_activate):
             return False
 
@@ -186,7 +191,9 @@ class UserService(BaseService):
 
     @classmethod
     @connection()
-    async def find_min_date_expire(cls, session: AsyncSession, telegram_id: str) -> str | None:
+    async def find_min_date_expire(
+        cls, session: AsyncSession, telegram_id: str
+    ) -> str | None:
         keys = await cls.get_all_keys(telegram_id=telegram_id)
         if keys:
             date = 10000000000000
@@ -201,7 +208,9 @@ class UserService(BaseService):
 
     @classmethod
     @connection()
-    async def find_expiry_keys(cls, session: AsyncSession, telegram_id: str) -> List[Key] | None:
+    async def find_expiry_keys(
+        cls, session: AsyncSession, telegram_id: str
+    ) -> List[Key] | None:
         keys = await cls.get_all_keys(telegram_id=telegram_id)
         if keys:
             expiry_keys = [key for key in keys if not key.status]

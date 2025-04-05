@@ -1,7 +1,6 @@
 from typing import List
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.orm import class_mapper
 
 from app.database import Base
 
@@ -37,7 +36,3 @@ class User(Base):
     )
 
     extend_existing = True
-
-    def to_dict(self) -> dict:
-        columns = class_mapper(self.__class__).columns
-        return {column.key: getattr(self, column.key) for column in columns}

@@ -47,9 +47,8 @@ async def start_tracking():
     try:
         scheduler.add_job(
             func=subscribe_30_day_expire,
-            trigger="interval",
-            seconds=10,
-            #jobstore="default",
+            trigger="cron",
+            hour=15,
             id="check_subscription",
             replace_existing=True,
             misfire_grace_time=300

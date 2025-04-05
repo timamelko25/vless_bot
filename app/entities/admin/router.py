@@ -7,13 +7,17 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import CallbackQuery, Message
 
+from app.broker.schemas import MessageScheme
 from app.config import settings, bot, broker
 from app.utils.utils import del_msg
 from app.entities.keys.panel_api import get_inbounds
 from app.entities.users.service import UserService
 from app.entities.keys.service import KeyService
+from app.entities.keys.schemas import KeyPayloadScheme
 from app.entities.servers.service import ServerService
 from app.entities.promocodes.service import PromocodeService
+from app.entities.promocodes.schemas import PromocodeScheme
+
 from .kb import (
     admin_kb,
     admin_kb_confirm_add_key,
@@ -254,14 +258,14 @@ async def admin_reset_key(call: CallbackQuery):
 
     try:
         key = await KeyService.find_one_or_none(id=int(key_id))
-        data = {
-            "id_panel": key.id_panel,
-            "email": key.email,
-            "limitIp": 3,
-            "totalGb": 107374182400,
-            "expiryTime": key.expires_at,
-            "enable": key.status,
-        }
+        data = KeyPayloadScheme(
+            id=key.id_panel,
+            email=key.email,
+            limitIp=3,
+            totalGb=107374182400,
+            expiryTime=key.expires_at,
+            status=key.status,
+        )
 
         if param == "expiryTime":
             current_time = datetime.now(timezone.utc).replace(
@@ -269,7 +273,7 @@ async def admin_reset_key(call: CallbackQuery):
             )
             new_time = current_time + timedelta(days=30)
             date = int(new_time.timestamp() * 1000)
-            data["expiryTime"] = date
+            data.expiryTime = date
 
             await KeyService.update_key(data=data, server=key.server)
 
@@ -398,11 +402,6 @@ async def admin_get_email(message: Message, state: FSMContext):
     await del_msg(message, state)
 
     data = await state.get_data()
-    email = (
-        str(uuid.uuid4()).replace("-", "")[:10]
-        if data["email"] == "0"
-        else data["email"]
-    )
 
     text = (
         f"Проверьте введенные поля\n"
@@ -628,8 +627,12 @@ async def admin_confirm_get_promo(call: CallbackQuery, state: FSMContext):
     # await bot.delete_message(chat_id=call.from_user.id, message_id=data['last_msg_id'])
     del data["last_msg_id"]
 
+    payload = PromocodeScheme(
+        code=data["code"], count=data["count"], bonus=data["bonus"]
+    )
+
     try:
-        info = await PromocodeService.generate_promocode(data=data)
+        info = await PromocodeService.generate_promocode(data=payload)
         if info:
             logger.info("Промокод успешно добавлен")
             await call.message.edit_text(
@@ -709,7 +712,10 @@ async def admin_confirm_spam_admins(call: CallbackQuery, state: FSMContext):
 async def admin_spam_admins(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     try:
-        await broker.publish(data["spam_message"], "admin_msg")
+        msg = MessageScheme(
+            message=data["spam_message"]
+        )
+        await broker.publish(msg, "admin_msg")
         logger.info("Генерация рассылки сообщений администраторам")
         await call.message.edit_text(
             text="Сообщения успешно разосланы", reply_markup=admin_kb()
@@ -722,7 +728,11 @@ async def admin_spam_admins(call: CallbackQuery, state: FSMContext):
 async def admin_spam_users(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     try:
-        await broker.publish(data["spam_message"], "users_msg")
+        msg = MessageScheme(
+            message=data["spam_message"]
+        )
+
+        await broker.publish(msg, "users_msg")
         logger.info("Генерация рассылки сообщений пользователям")
         await call.message.edit_text(
             text="Сообщения успешно разосланы", reply_markup=admin_kb()
@@ -756,10 +766,10 @@ async def admin_spam_get_telegram_id(message: Message, state: FSMContext):
 
             data = await state.get_data()
 
-            msg = {
-                "user_id": data["telegram_id"],
-                "msg": data["spam_message"],
-            }
+            msg = MessageScheme(
+                message=data["spam_message"],
+                telegram_id=data["telegram_id"],
+            )
 
             await broker.publish(msg, "send_msg")
             logger.info("Генерация отправки сообщения")

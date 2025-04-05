@@ -1,7 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
 
-
 class UserScheme(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     telegram_id: int

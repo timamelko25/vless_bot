@@ -60,14 +60,6 @@ def servers_inline_kb(servers: List) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-# def prices_reply_kb() -> ReplyKeyboardMarkup:
-#     kb = ReplyKeyboardBuilder()
-#     kb.button(text="100 💸")
-#     kb.button(text="250 💸")
-#     kb.button(text="500 💸")
-#     return kb
-
-
 def keys_inline_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="IOS", callback_data="get_info_ios")
@@ -82,7 +74,9 @@ def keys_inline_kb() -> InlineKeyboardMarkup:
 
 def del_key_kb(key_email: str, server_name: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="❌ Удалить ключ", callback_data=f"confirm_del:{key_email}:{server_name}")
+    kb.button(
+        text="❌ Удалить ключ", callback_data=f"confirm_del:{key_email}:{server_name}"
+    )
     kb.adjust(1)
     return kb.as_markup()
 

@@ -110,17 +110,6 @@ broker = RabbitBroker(url=settings.get_rabbitmq_url())
 Base_jobs = declarative_base()
 
 
-# jobstore_engine = create_engine(url=PG_JOBS_URL)
-# jobstore_session = sessionmaker(jobstore_engine, expire_on_commit=False)
-
-
-def init_jobstore_db():
-    """Создание таблицы для APScheduler (если отсутствует)."""
-    if not database_exists(PG_JOBS_URL):
-        create_database(PG_JOBS_URL)
-        logger.info("JobStore database initialized")
-
-
 scheduler = AsyncIOScheduler(
     jobstores={"default": SQLAlchemyJobStore(url=settings.get_pg_jobs_url())},
     timezone="Europe/Moscow",

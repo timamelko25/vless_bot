@@ -7,14 +7,22 @@ from app.database import connection
 
 
 class BaseService:
-    """
-    Базовый сервис для работы с моделями SQLAlchemy.
-    Определяет стандартные CRUD-методы:
-    - `find_all` — получить все записи по фильтру.
-    - `find_one_or_none` — получить одну запись или None по фильтру.
-    - `add` — добавить новую запись в базу данных.
-    - `update` — обновляет запись в базе данных.
-    - 'to_dict'  - Универсальный метод для конвертации объекта SQLAlchemy в словарь
+    """Base service class providing common database operations for SQLAlchemy models.
+
+    This class should be subclassed, and the `model` attribute must be set to a SQLAlchemy
+    model class. Provides async CRUD operations and basic query methods.
+
+    Methods:
+        find_all: Retrieve multiple records from the database.
+        find_one_or_none: Fetch a single record or return None.
+        add: Create and persist a new database record.
+        update: Modify existing records based on filters.
+        delete: Remove records from the database.
+        to_dict: Convert model instance to dictionary representation.
+
+    Attributes:
+        model (DeclarativeBase): SQLAlchemy model class to operate on. Must be
+            defined in subclasses.
     """
 
     model = None
@@ -53,18 +61,17 @@ class BaseService:
         result = await session.execute(query)
         await session.flush()
         return result.rowcount
-    
+
     @classmethod
     @connection()
     async def delete(cls, session: AsyncSession, delete_all: bool = False, **filter_by):
         if not delete_all and not filter_by:
             raise ValueError("Enter at least 1 parameter")
-        
+
         query = sqlalchemy_delete(cls.model).filter_by(**filter_by)
         result = await session.execute(query)
         await session.flush()
         return result.rowcount
-        
 
     def to_dict(self) -> dict:
         columns = class_mapper(self.__class__).columns

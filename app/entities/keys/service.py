@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.entities.servers.models import Server
 from app.service.base import BaseService, connection
+from .schemas import KeyPayloadScheme
 from .models import Key
 from .panel_api import get_inbounds, add_client, delete_client, update_client
 
@@ -13,35 +14,23 @@ from .panel_api import get_inbounds, add_client, delete_client, update_client
 class KeyService(BaseService):
     model = Key
 
-    # gen key
     @classmethod
-    async def generate_key(cls, data, server) -> Dict:
-        # server = await ServerService.find_one_or_none(name=server)
-
-        data = {
-            "id": data.get("id"),
-            "email": data.get("email"),
-            "limitIp": data.get("limitIp"),
-            "totalGB": data.get("totalGB"),
-            "expiryTime": data.get("expiryTime"),
-        }
-
+    async def generate_key(cls, data: KeyPayloadScheme, server: Server) -> Dict:
         info = await get_inbounds(url=server.domain)
-        await add_client(data, url=server.domain)
+        await add_client(url=server.domain, data=data)
 
         key = info.get("obj")
         stream_settings = key[0].get("streamSettings", {})
-        stream_settings = json.loads(stream_settings) 
-        
+        stream_settings = json.loads(stream_settings)
+
         start = len("https://")
         end = server.domain.find(":8443")
         dest = server.domain[start:end]
-        
+
         type = stream_settings.get("network")
         security = stream_settings.get("security")
         realitySettings = stream_settings.get("realitySettings", {})
-        
-        
+
         serverName = realitySettings.get("serverNames")
         shortIds = realitySettings.get("shortIds")
         settings_panel = realitySettings.get("settings", {})
@@ -54,23 +43,21 @@ class KeyService(BaseService):
 
         return data
 
-    # upd key
     @classmethod
     @connection()
     async def update_key(
-        cls, session: AsyncSession, data: Dict[str, str], server
+        cls, session: AsyncSession, data: KeyPayloadScheme, server: Server
     ):
         try:
-
-            info = await update_client(url=server.domain, data=data, uuid=data.get('id_panel'))
+            info = await update_client(url=server.domain, data=data, uuid=data.id)
             info = await cls.update(
-                filter_by={"id_panel": data.get("id_panel")},
-                expires_at=str(data.get("expiryTime")),
-                status=data.get("enable"),
+                filter_by={"id_panel": data.id},
+                expires_at=str(data.expiryTime),
+                status=data.status,
             )
 
             await session.flush()
-            logger.info(f"Key successfully updated {data.get('email')}")
+            logger.info(f"Key successfully updated {data.email}")
             return info
 
         except Exception as e:

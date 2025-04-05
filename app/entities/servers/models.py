@@ -12,7 +12,7 @@ class Server(Base):
     domain: Mapped[str] = mapped_column(unique=True, nullable=False)
     description: Mapped[str] = mapped_column(nullable=True)
 
-    keys: Mapped[List["Key"]] = relationship( # type: ignore
+    keys: Mapped[List["Key"]] = relationship( # type: ignore  # noqa: F821
         "Key",
         back_populates='server',
         lazy='selectin',

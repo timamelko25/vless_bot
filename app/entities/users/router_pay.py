@@ -6,10 +6,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import StateFilter
 
+from app.broker.schemas import MessageScheme
 from app.config import bot, settings, broker
 from app.entities.keys.service import KeyService
+from app.entities.keys.schemas import KeyPayloadScheme
 from app.utils.utils import del_msg
 from app.entities.payments.service import PaymentService
+from app.entities.payments.schemas import PaymentScheme
 from .kb import (
     gen_key_inline_kb,
     kb_confirm_upd,
@@ -107,8 +110,8 @@ async def confirm_add_balance(call: CallbackQuery, state: FSMContext):
             currency="RUB",
             # need_phone_number=True,
             # send_phone_number_to_provider=True,
-            # need_email=True,
-            # send_email_to_provider=True,
+            need_email=True,
+            send_email_to_provider=True,
             start_parameter="test",
             prices=[LabeledPrice(label=f"Оплата {price}", amount=int(price) * 100)],
             reply_markup=payment_inline_kb(price),
@@ -144,11 +147,11 @@ async def successful_payment(message: Message, state: FSMContext):
 
         user_id, balance = payment_info.invoice_payload.split("_")
 
-        payment_data = {
-            "user_id": int(user_id),
-            "payment_id": payment_info.telegram_payment_charge_id,
-            "sum": payment_info.total_amount / 100,
-        }
+        payment_data = PaymentScheme(
+            user_id=user_id,
+            payment_id=payment_info.telegram_payment_charge_id,
+            sum=payment_info.total_amount / 100,
+        )
 
         user = await UserService.find_one_or_none(id=int(user_id))
 
@@ -181,7 +184,11 @@ async def successful_payment(message: Message, state: FSMContext):
         else:
             text = f"💲 Пользователь {user_info} пополнил баланс на {balance}"
 
-        await broker.publish(text, "admin_msg")
+        msg = MessageScheme(
+            message=text
+            )
+        
+        await broker.publish(msg, "admin_msg")
 
         logger.info(f"Пользователь {user_info} пополнил баланс на {balance}")
         await message.answer(
@@ -197,14 +204,14 @@ async def successful_payment(message: Message, state: FSMContext):
             new_time = current_time + timedelta(days=30)
             date = int(new_time.timestamp() * 1000)
             for key in keys:
-                data = {
-                    "id_panel": key.id_panel,
-                    "email": key.email,
-                    "limitIp": 3,
-                    "totalGb": 107374182400,
-                    "expiryTime": date,
-                    "enable": True,
-                }
+                data = KeyPayloadScheme(
+                    id=key.id_panel,
+                    email=key.email,
+                    limitIp=3,
+                    totalGb=107374182400,
+                    expiryTime=str(date),
+                    status=True,
+                )
 
                 info = await KeyService.update_key(data=data, server=key.server)
                 if info:

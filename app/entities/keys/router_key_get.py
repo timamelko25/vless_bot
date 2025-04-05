@@ -5,6 +5,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
+from app.broker.schemas import MessageScheme
 from app.config import broker
 from app.entities.servers.service import ServerService
 from app.entities.users.service import UserService
@@ -79,10 +80,15 @@ async def get_key(call: CallbackQuery, state: FSMContext):
             "📜 Для активации воспользуйтесь прикрепленной инструкцией."
         )
 
+        msg = MessageScheme(
+            message=f"Пользователь {user.telegram_id} купил ключ {key.get('email')}",
+        )
+
         await broker.publish(
-            f"Пользователь {user.telegram_id} купил ключ {key.get('email')}",
+            msg,
             "admin_msg",
         )
+
         await call.message.edit_text(
             text=text,
             reply_markup=keys_inline_kb(),

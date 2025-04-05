@@ -1,1 +1,42 @@
 docker-compose run --rm aiogram alembic upgrade head
+
+structure .env
+
+```
+BOT_TOKEN=
+#payment token (юкасса)
+PROVIDER_TOKEN=
+ADMINS_LIST = []
+
+PG_USER=
+PG_PASSWORD=
+PG_HOST=postgres
+PG_PORT=5432
+PG_NAME=
+
+PG_JOBS_USER=
+PG_JOBS_PASSWORD=
+PG_JOBS_HOST=postgres_jobs
+PG_JOBS_PORT=5432
+PG_JOBS_NAME=
+
+REDIS_HOST=redis_vless
+REDIS_PORT=6379
+REDIS_USER=
+REDIS_USER_PASSWORD=
+REDIS_DB=0
+
+REDIS_PASSWORD=
+
+RABBITMQ_USERNAME=
+RABBITMQ_PASSWORD=
+RABBITMQ_HOST=rabbitmq
+RABBITMQ_PORT=5672
+VHOST=
+
+#webhook
+BASE_URL=
+
+VLESS_USERNAME=
+VLESS_PASSWORD=
+```

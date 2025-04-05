@@ -164,17 +164,17 @@ async def get_promocode(message: Message, state: FSMContext):
         apply_info = await UserService.get_promocode(
             telegram_id=str(message.from_user.id), code=promocode_info.code
         )
-        
-    if apply_info == False:
-        text = "Промокод уже был активирован :(\nПопробуйте ввести другой для активации"
-        msg = await message.answer(text=text, reply_markup=promocode_inline_kb())
 
-    if promocode_info and apply_info:
-        text = (
-            f"Промокод успешно применен!\n"
-            f"Ваш баланс пополнен на {promocode_info.bonus}₽"
-        )
-        msg = await message.answer(text=text, reply_markup=home_inline_kb())
+        if not apply_info:
+            text = "Промокод уже был активирован :(\nПопробуйте ввести другой для активации"
+            msg = await message.answer(text=text, reply_markup=promocode_inline_kb())
+
+        elif promocode_info and apply_info:
+            text = (
+                f"Промокод успешно применен!\n"
+                f"Ваш баланс пополнен на {promocode_info.bonus}₽"
+            )
+            msg = await message.answer(text=text, reply_markup=home_inline_kb())
     else:
         text = "Промокод не найден :(\nПопробуйте ввести другой для активации"
         msg = await message.answer(text=text, reply_markup=promocode_inline_kb())
@@ -220,7 +220,7 @@ async def confirm_delete_key(call: CallbackQuery):
     key_email = call.data.split(":")[1]
     server_name = call.data.split(":")[2]
 
-    key = await KeyService.find_one_or_none(email=key_email)    
+    key = await KeyService.find_one_or_none(email=key_email)
     server = await ServerService.find_one_or_none(name=server_name)
 
     await KeyService.delete_key(uuid=key.id_panel, server=server)
