@@ -8,6 +8,8 @@ services:
       - PYTHONPATH=/app
     ports:
       - "8000:8000"
+    volumes:
+      - .:/app
     restart: unless-stopped
     depends_on:
       rabbitmq:
