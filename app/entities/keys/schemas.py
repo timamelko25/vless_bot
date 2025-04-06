@@ -7,7 +7,7 @@ class KeyPayloadScheme(BaseModel):
     email: str
     limitIp: int
     totalGb: int
-    expiryTime: int
+    expiryTime: str
     status: bool | None = None
 
 class KeyScheme(BaseModel):
