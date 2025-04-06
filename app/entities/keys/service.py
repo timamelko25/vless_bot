@@ -43,7 +43,6 @@ class KeyService(BaseService):
             **data.model_dump(),
             value=key,
             server_id=server.id,
-            status=True
             )
 
         return info

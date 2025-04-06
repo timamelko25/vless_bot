@@ -108,7 +108,7 @@ class UserService(BaseService):
             value=info.value,
             expires_at=info.expiryTime,
             email=info.email,
-            status=info.status,
+            status=True,
         )
 
         user.keys.append(new_key)
