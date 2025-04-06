@@ -12,10 +12,3 @@ class NewUserScheme(BaseModel):
     refer_id: str | None
 
 
-class KeyScheme(BaseModel):
-    user_id: str
-    user: Dict
-    id_panel: str
-    email: str
-    value: str
-    expires_at: str

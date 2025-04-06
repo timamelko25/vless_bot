@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.entities.servers.models import Server
 from app.service.base import BaseService, connection
-from .schemas import KeyPayloadScheme
+from .schemas import KeyPayloadScheme, KeyScheme
 from .models import Key
 from .panel_api import get_inbounds, add_client, delete_client, update_client
 
@@ -15,7 +15,7 @@ class KeyService(BaseService):
     model = Key
 
     @classmethod
-    async def generate_key(cls, data: KeyPayloadScheme, server: Server) -> Dict:
+    async def generate_key(cls, data: KeyPayloadScheme, server: Server) -> KeyScheme:
         info = await get_inbounds(url=server.domain)
         await add_client(url=server.domain, data=data)
 
@@ -39,9 +39,13 @@ class KeyService(BaseService):
 
         key = f"vless://{data.id}@{dest}:443?type={type}&security={security}&pbk={publicKey}&fp={fp}&sni={serverName[0]}&sid={shortIds[0]}&spx=%2F&flow=xtls-rprx-vision#{data.email}"
 
-        data.update({"key_value": key, "server_id": server.id})
+        info = KeyScheme(
+            **data.model_dump(),
+            value=key,
+            server_id=server.id
+            )
 
-        return data
+        return info
 
     @classmethod
     @connection()
