@@ -78,7 +78,7 @@ class UserService(BaseService):
         session: AsyncSession,
         telegram_id: str,
         server_name: str,
-        data: KeyPayloadScheme = None,
+        data: KeyPayloadScheme | None = None,
     ) -> Dict:
         user = await cls.find_one_or_none(telegram_id=telegram_id)
         server = await ServerService.find_one_or_none(name=server_name)
