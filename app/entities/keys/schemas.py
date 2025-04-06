@@ -16,6 +16,6 @@ class KeyScheme(BaseModel):
     limitIp: int
     totalGb: int
     expiryTime: int
-    status: bool
+    status: bool | None
     value: str
     server_id: int_pk
