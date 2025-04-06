@@ -101,14 +101,14 @@ class UserService(BaseService):
 
         new_key = Key(
             user_id=str(user.id),
-            server_id=info.get("server_id"),
+            server_id=info.server_id,
             user=user,
             # server=server,
-            id_panel=info.get("id"),
-            value=info.get("key_value"),
-            expires_at=info.get("expiryTime"),
-            email=info.get("email"),
-            status=True,
+            id_panel=info.id,
+            value=info.value,
+            expires_at=info.expiryTime,
+            email=info.email,
+            status=info.status,
         )
 
         user.keys.append(new_key)

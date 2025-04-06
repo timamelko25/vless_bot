@@ -42,7 +42,8 @@ class KeyService(BaseService):
         info = KeyScheme(
             **data.model_dump(),
             value=key,
-            server_id=server.id
+            server_id=server.id,
+            status=True
             )
 
         return info
