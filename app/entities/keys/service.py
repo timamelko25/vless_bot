@@ -37,7 +37,7 @@ class KeyService(BaseService):
         publicKey = settings_panel.get("publicKey")
         fp = settings_panel.get("fingerprint")
 
-        key = f"vless://{data.get('id')}@{dest}:443?type={type}&security={security}&pbk={publicKey}&fp={fp}&sni={serverName[0]}&sid={shortIds[0]}&spx=%2F&flow=xtls-rprx-vision#{data.get('email')}"
+        key = f"vless://{data.id}@{dest}:443?type={type}&security={security}&pbk={publicKey}&fp={fp}&sni={serverName[0]}&sid={shortIds[0]}&spx=%2F&flow=xtls-rprx-vision#{data.email}"
 
         data.update({"key_value": key, "server_id": server.id})
 

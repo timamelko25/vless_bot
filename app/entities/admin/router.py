@@ -175,7 +175,7 @@ async def admin_get_domain_server(message: Message, state: FSMContext):
     text = (
         f"Проверьте введенные данные\n\n"
         f"Имя сервера для бота {data['name']}\n"
-        f"Доменное имя сервера{data['domain']}\n"
+        f"Доменное имя сервера {data['domain']}\n"
     )
 
     msg = await message.answer(text=text, reply_markup=admin_kb_confirm_add_server())
