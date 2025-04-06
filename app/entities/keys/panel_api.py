@@ -119,7 +119,7 @@ async def add_client(url: str, data: KeyPayloadScheme):
         ) as response:
             if response.status == 200:
                 info = await response.json()
-                logger.info(f"New client added to panel {data.get('email')}")
+                logger.info(f"New client added to panel {data.email}")
                 await session.close()
                 return info
             else:
