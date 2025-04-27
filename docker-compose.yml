@@ -7,7 +7,7 @@ services:
     environment:
       - PYTHONPATH=/app
     ports:
-      - "8000:8000"
+      - "8080:8000"
     volumes:
       - .:/app
     restart: unless-stopped
@@ -32,7 +32,7 @@ services:
       POSTGRES_PASSWORD: ${PG_PASSWORD}
       POSTGRES_DB: ${PG_NAME}
     ports:
-      - "5432:5432"
+      - "5431:5432"
     volumes:
       - .:/var/db/pgdata
     deploy:

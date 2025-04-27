@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import class_mapper
 
 from app.database import Base
 
@@ -8,6 +7,7 @@ from app.database import Base
 class Key(Base):
     __tablename__ = "keys"
 
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     user: Mapped["User"] = relationship(  # type: ignore  # noqa: F821
         "User", back_populates="keys", lazy="selectin"

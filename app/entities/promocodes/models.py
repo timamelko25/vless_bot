@@ -17,6 +17,7 @@ PromoUser = Table(
 class Promocode(Base):
     __tablename__ = "promocodes"
 
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(unique=True, nullable=False)
     count: Mapped[int] = mapped_column(nullable=False, unique=False, default=0)
     bonus: Mapped[float] = mapped_column(nullable=False, unique=False, default=0)

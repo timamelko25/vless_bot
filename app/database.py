@@ -9,7 +9,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, class_mapper
 
 from .config import PG_URL
 
-
 int_pk = Annotated[int, mapped_column(primary_key=True, autoincrement=True)]
 
 
@@ -20,13 +19,12 @@ class Base(AsyncAttrs, DeclarativeBase):
     """
 
     __abstract__ = True
-    id: Mapped[int_pk]
 
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, server_default=func.now(), onupdate=func.now()
     )
-    
+
     def to_dict(self) -> dict:
         columns = class_mapper(self.__class__).columns
         return {column.key: getattr(self, column.key) for column in columns}

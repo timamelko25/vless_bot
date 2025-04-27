@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 
 from app.config import bot, dp, settings, broker, scheduler
+from app.utils.logger_conf import setup_logging
 from app.entities.users.router_start import router as user_router_start
 from app.entities.users.router_pay import router as user_router_pay
 from app.entities.keys.router_key_get import router as key_router_get
@@ -47,8 +48,8 @@ async def start_tracking():
     try:
         scheduler.add_job(
             func=subscribe_30_day_expire,
-            trigger="cron",
-            hour=15,
+            trigger="interval",
+            seconds=60,
             id="check_subscription",
             replace_existing=True,
             misfire_grace_time=300
@@ -74,6 +75,7 @@ async def lifespan(app: FastAPI):
         allowed_updates=dp.resolve_used_update_types(),
         drop_pending_updates=True,
     )
+    setup_logging()
     logger.success(f"Webhook set {webhook_url}")
     yield
     logger.info("Bot getting stopped")
@@ -94,10 +96,10 @@ async def webhook(request: Request) -> None:
         update_data = await request.json()
         update = Update.model_validate(update_data, context={"bot": bot})
         await dp.feed_update(bot, update)
-        logger.info("Обновление успешно обработано.")
+        logger.info("Webhook status updated")
     except Exception as e:
         tb_str = traceback.format_exc()
-        logger.error(f"Ошибка при обработке обновления с вебхука: {e}\n {tb_str}")
+        logger.error(f"Error from webhook: {e}\n {tb_str}")
 
 
 @app.get("/test")

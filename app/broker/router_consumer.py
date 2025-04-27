@@ -1,5 +1,4 @@
 from faststream.rabbit.fastapi import RabbitRouter
-from aiogram.types import InlineKeyboardMarkup
 
 from app.config import settings, bot
 from app.entities.users.service import UserService
@@ -29,5 +28,3 @@ async def send_msg(msg: MessageScheme):
         chat_id=msg.telegram_id, text=msg.message, reply_markup=msg.keyboard
     )
 
-
-# сделать слушателя на очередь отправки уведомлений для оплаты (после 30 дней)

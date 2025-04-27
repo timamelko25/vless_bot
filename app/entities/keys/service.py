@@ -5,7 +5,8 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.entities.servers.models import Server
-from app.service.base import BaseService, connection
+from app.service.base import BaseService
+from app.database import connection
 from .schemas import KeyPayloadScheme, KeyScheme
 from .models import Key
 from .panel_api import get_inbounds, add_client, delete_client, update_client

@@ -21,6 +21,7 @@ async def subscribe_30_day_expire():
     Handles all active users and their keys, operating on Moscow time basis
     (15:00 Moscow time daily check). Converts time to UTC for processing.
     """
+    logger.info("Start updating keys")
     users = await UserService.find_all()
 
     moscow_time = datetime.now(timezone.utc) + timedelta(hours=3)
@@ -30,10 +31,12 @@ async def subscribe_30_day_expire():
     for user in users:
         for key in user.keys:
             key_expire_time = datetime.fromtimestamp(
-                int(key.expires_at), tz=timezone.utc
+                int(key.expires_at)//1000, tz=timezone.utc
             )
             diff = key_expire_time - current_time_utc
-
+            logger.info(key_expire_time)
+            logger.info(current_time_utc)
+            logger.info(diff)
             if (
                 timedelta(days=3) - timedelta(hours=7)
                 <= diff
@@ -48,22 +51,22 @@ async def subscribe_30_day_expire():
                     telegram_id=user.telegram_id,
                     keyboard=get_key_inline_kb(),
                 )
+                await broker.publish(msg, "send_msg")
 
             elif diff <= timedelta(days=1):
+                new_time = current_time_utc + timedelta(days=30)
+                date = int(new_time.timestamp() * 1000)
                 if user.balance >= 150.0:
                     await UserService.update_balance(
                         telegram_id=user.telegram_id, balance=-150.0
                     )
-
-                    new_time = current_time_utc + timedelta(days=30)
-                    date = int(new_time.timestamp() * 1000)
 
                     data = KeyPayloadScheme(
                         id=key.id_panel,
                         email=key.email,
                         limitIp=3,
                         totalGb=107374182400,
-                        expiryTime=date,
+                        expiryTime=str(date),
                         status=True,
                     )
 
@@ -88,14 +91,14 @@ async def subscribe_30_day_expire():
                         email=key.email,
                         limitIp=3,
                         totalGb=107374182400,
-                        expiryTime=date,
-                        status=True,
+                        expiryTime=str(1),
+                        status=False,
                     )
 
                     info = await KeyService.update_key(data=data, server=key.server)
                     if info:
                         msg = MessageScheme(
-                            message=f"Недостаточно средств для оплаты ключа {key.email}"
+                            message=f"Недостаточно средств для оплаты ключа {key.email}\n"
                             "Пополните баланс для возобновления работы ключа",
                             telegram_id=user.telegram_id,
                             keyboard=get_key_inline_kb(),

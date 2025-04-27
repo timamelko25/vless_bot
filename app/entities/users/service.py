@@ -13,6 +13,7 @@ from app.database import connection
 from app.entities.keys.service import KeyService
 from app.entities.keys.schemas import KeyPayloadScheme
 from app.entities.promocodes.service import PromocodeService
+from app.database import async_session_maker
 from .models import User
 
 
@@ -160,14 +161,13 @@ class UserService(BaseService):
         return False
 
     @classmethod
-    @connection()
-    async def get_all_keys(cls, session: AsyncSession, telegram_id: str) -> List:
+    async def get_all_keys(cls, telegram_id: str) -> List | None:
         user = await cls.find_one_or_none(telegram_id=telegram_id)
 
         if not user:
             logger.error(f"User {telegram_id} not found while getting keys")
+            return None
 
-        await session.flush()
         return user.keys
 
     @classmethod
@@ -190,21 +190,21 @@ class UserService(BaseService):
         return None
 
     @classmethod
-    @connection()
     async def find_min_date_expire(
-        cls, session: AsyncSession, telegram_id: str
+        cls, telegram_id: str
     ) -> str | None:
-        keys = await cls.get_all_keys(telegram_id=telegram_id)
-        if keys:
-            date = 10000000000000
-            for key in keys:
-                date = min(int(key.expires_at), date)
+        async with async_session_maker() as session:
+            keys = await cls.get_all_keys(telegram_id=telegram_id)
+            if keys:
+                date = 10000000000000
+                for key in keys:
+                    date = min(int(key.expires_at), date)
 
-            date = datetime.fromtimestamp(date / 1000, tz=timezone.utc).strftime(
-                "%Y-%m-%d"
-            )
-            return date
-        return None
+                date = datetime.fromtimestamp(date / 1000, tz=timezone.utc).strftime(
+                    "%Y-%m-%d"
+                )
+                return date
+            return None
 
     @classmethod
     @connection()
