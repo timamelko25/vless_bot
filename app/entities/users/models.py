@@ -1,6 +1,7 @@
 from typing import List
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.types import BigInteger
 
 from app.database import Base
 
@@ -9,7 +10,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    telegram_id: Mapped[str] = mapped_column(unique=True, nullable=False, index=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, index=True)
 
     username: Mapped[str] = mapped_column(nullable=True)
     first_name: Mapped[str] = mapped_column(nullable=True)
@@ -17,7 +18,7 @@ class User(Base):
 
     balance: Mapped[float] = mapped_column(nullable=False, default=0)
 
-    refer_id: Mapped[str] = mapped_column(nullable=True)
+    refer_id: Mapped[int] = mapped_column(BigInteger, nullable=True)
     count_refer: Mapped[int] = mapped_column(nullable=False, default=0)
 
     description: Mapped[str] = mapped_column(nullable=True)

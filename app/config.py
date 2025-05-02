@@ -10,9 +10,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.client.default import DefaultBotProperties
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy_utils import create_database, database_exists
+from sqlalchemy.orm import declarative_base
 
 
 class Settings(BaseSettings):
@@ -81,7 +79,7 @@ class Settings(BaseSettings):
         )
 
     def get_webhook(self):
-        return f"{self.BASE_URL}/webhook"
+        return f"{self.BASE_URL}webhook"
 
 
 settings = Settings()  # type: ignore
@@ -96,7 +94,8 @@ bot = Bot(
 dp = Dispatcher(storage=RedisStorage.from_url(REDIS_URL))
 admins = settings.ADMINS_LIST
 
-log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log.txt")
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+log_file_path = os.path.join(parent_dir, "log.txt")
 logger.add(
     log_file_path,
     format=settings.FORMAT_LOG,

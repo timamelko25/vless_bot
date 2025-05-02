@@ -10,7 +10,6 @@ from aiogram.types import CallbackQuery, Message
 from app.broker.schemas import MessageScheme
 from app.config import settings, bot, broker
 from app.utils.utils import del_msg
-from app.entities.keys.panel_api import get_inbounds
 from app.entities.users.service import UserService
 from app.entities.keys.service import KeyService
 from app.entities.keys.schemas import KeyPayloadScheme
@@ -22,18 +21,18 @@ from .kb import (
     admin_kb,
     admin_kb_confirm_add_key,
     admin_kb_confirm_spam_admins,
-    admin_kb_del_server,
-    admin_kb_key_options,
-    admin_kb_messages,
-    admin_kb_promo,
-    admin_kb_server,
-    admin_kb_user,
-    admin_kb_key,
-    admin_cancel_kb,
+    del_server_kb_admin,
+    key_option_kb_admin,
+    spam_kb_admin,
+    promo_kb_admin,
+    server_kb_admin,
+    user_kb_admin,
+    key_kb_admin,
+    cancel_kb_admin,
     admin_kb_confirm_upd_balance,
     admin_kb_confirm_add_server,
     admin_kb_confirm_gen_promo,
-    admin_servers_inline_kb,
+    admin_servers_kb,
 )
 
 router = Router()
@@ -77,7 +76,10 @@ class SpamMessage(StatesGroup):
 @router.callback_query(F.data == "cancel", F.from_user.id.in_(settings.ADMINS_LIST))
 async def admin_handler_cancel(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    await call.message.edit_text(text="Cancel operation", reply_markup=admin_kb())
+    await call.message.edit_text(
+        text="Операция отменена",
+        reply_markup=admin_kb(),
+    )
 
 
 @router.callback_query(
@@ -95,22 +97,29 @@ async def admin_stats(call: CallbackQuery):
     # сделать в сервисах пользователя и сервера функции для статистики
     # клавиатура для подбора статистики
 
-    stats = await get_inbounds()
-    await call.message.edit_text(text=stats, reply_markup=admin_kb())
+    # stats = await get_inbounds()
+    # await call.message.edit_text(text=stats, reply_markup=admin_kb(),)
+    pass
 
 
 @router.callback_query(
     F.data == "handler_user", F.from_user.id.in_(settings.ADMINS_LIST)
 )
 async def admin_handler_user(call: CallbackQuery):
-    await call.message.edit_text(text="Choose option", reply_markup=admin_kb_user())
+    await call.message.edit_text(
+        text="Выберете действие",
+        reply_markup=user_kb_admin(),
+    )
 
 
 @router.callback_query(
     F.data == "handler_server", F.from_user.id.in_(settings.ADMINS_LIST)
 )
 async def admin_handler_server(call: CallbackQuery):
-    await call.message.edit_text(text="Choose option", reply_markup=admin_kb_server())
+    await call.message.edit_text(
+        text="Выберете действие",
+        reply_markup=server_kb_admin(),
+    )
 
 
 @router.callback_query(
@@ -126,10 +135,12 @@ async def admin_del_server(call: CallbackQuery):
             f"Количество купленных ключей {len(server.keys)}"
         )
         await call.message.answer(
-            text=text, reply_markup=admin_kb_del_server(server.name)
+            text=text,
+            reply_markup=del_server_kb_admin(server.name),
         )
     await call.message.answer(
-        text="Все выделенные сервера", reply_markup=admin_kb_server()
+        text="Все выделенные сервера",
+        reply_markup=server_kb_admin(),
     )
 
 
@@ -147,7 +158,8 @@ async def admin_del_server_confirm(call: CallbackQuery):
 async def admin_add_server(call: CallbackQuery, state: FSMContext):
     await state.clear()
     msg = await call.message.edit_text(
-        text="Для добавления сервера введите Название\n", reply_markup=admin_cancel_kb()
+        text="Для добавления сервера введите Название\n",
+        reply_markup=cancel_kb_admin(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -160,7 +172,8 @@ async def admin_get_name_server(message: Message, state: FSMContext):
     await del_msg(message, state)
 
     msg = await message.answer(
-        text="Введите доменное имя сервера\n", reply_markup=admin_cancel_kb()
+        text="Введите доменное имя сервера\n",
+        reply_markup=cancel_kb_admin(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -178,7 +191,10 @@ async def admin_get_domain_server(message: Message, state: FSMContext):
         f"Доменное имя сервера {data['domain']}\n"
     )
 
-    msg = await message.answer(text=text, reply_markup=admin_kb_confirm_add_server())
+    msg = await message.answer(
+        text=text,
+        reply_markup=admin_kb_confirm_add_server(),
+    )
 
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(NewServer.confirm)
@@ -196,12 +212,14 @@ async def admin_confirm_add_server(call: CallbackQuery, state: FSMContext):
         info = await ServerService.add(name=data["name"], domain=data["domain"])
         if info:
             await call.message.edit_text(
-                text="Сервер успешно добавлен", reply_markup=admin_kb()
+                text="Сервер успешно добавлен",
+                reply_markup=admin_kb(),
             )
     except Exception as e:
-        logger.error(f"Ошибка при добавлении сервера {e}")
+        logger.error(f"Error while adding server {e}")
         await call.message.edit_text(
-            text="Ошибка при добавлении сервера", reply_markup=admin_kb()
+            text="Ошибка при добавлении сервера",
+            reply_markup=admin_kb(),
         )
 
 
@@ -209,7 +227,10 @@ async def admin_confirm_add_server(call: CallbackQuery, state: FSMContext):
     F.data == "handler_key", F.from_user.id.in_(settings.ADMINS_LIST)
 )
 async def admin_handler_key(call: CallbackQuery):
-    await call.message.edit_text(text="Choose option", reply_markup=admin_kb_key())
+    await call.message.edit_text(
+        text="Choose option",
+        reply_markup=key_kb_admin(),
+    )
 
 
 @router.callback_query(
@@ -219,7 +240,8 @@ async def admin_get_all_keys(call: CallbackQuery):
     keys = await KeyService.find_all()
     if not keys:
         await call.message.edit_text(
-            text="Нет выпущенных ключей", reply_markup=admin_kb()
+            text="Нет выпущенных ключей",
+            reply_markup=admin_kb(),
         )
     else:
         for key in keys:
@@ -240,19 +262,20 @@ async def admin_get_all_keys(call: CallbackQuery):
             )
             await call.message.answer(
                 text=text,
-                reply_markup=admin_kb_key_options(
+                reply_markup=key_option_kb_admin(
                     key.id
                 ),  # сделать нормальную клаву для обновления ключа удаления или что-то еще (посмотреть из бота самой панели)
             )
         await call.message.answer(
-            text="Все выпущенные ключи", reply_markup=admin_kb_key()
+            text="Все выпущенные ключи",
+            reply_markup=key_kb_admin(),
         )
 
 
 @router.callback_query(
     F.data.startswith("reset_param:"), F.from_user.id.in_(settings.ADMINS_LIST)
 )
-async def admin_reset_key(call: CallbackQuery):
+async def admin_reset_key(call: CallbackQuery, state: FSMContext):
     key_id = call.data.split(":")[1]
     param = call.data.split(":")[2]
 
@@ -279,7 +302,7 @@ async def admin_reset_key(call: CallbackQuery):
 
             await call.message.edit_text(
                 text=f"Ключ (время жизни) {key.email} успешно обновлен",
-                reply_markup=admin_kb_key(),
+                reply_markup=key_kb_admin(),
             )
         elif param == "delete":
             await KeyService.delete_key(uuid=key.id_panel, server=key.server)
@@ -288,9 +311,11 @@ async def admin_reset_key(call: CallbackQuery):
     except Exception as e:
         logger.error(f"Error while updating from admin panel {e}")
 
-        await call.message.answer(
-            text="Ошибка при действии с ключом", reply_markup=admin_kb_key()
+        msg = await call.message.answer(
+            text="Ошибка при действии с ключом",
+            reply_markup=key_kb_admin(),
         )
+        await state.update_data(last_msg_id=msg.message_id)
 
 
 # сделать вывод всех ключей по серверам
@@ -303,7 +328,7 @@ async def admin_generate_key(call: CallbackQuery, state: FSMContext):
     await state.clear()
     msg = await call.message.edit_text(
         text="Для генерации ключа введите telegram_id для присвоения:\n 0 для генерации на админа",
-        reply_markup=admin_cancel_kb(),
+        reply_markup=cancel_kb_admin(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -312,16 +337,33 @@ async def admin_generate_key(call: CallbackQuery, state: FSMContext):
 
 @router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), NewKey.telegram_id)
 async def admin_get_telegram_id(message: Message, state: FSMContext):
-    telegram_id = str(message.from_user.id) if message.text == "0" else message.text
-    await state.update_data(telegram_id=telegram_id)
-    await del_msg(message, state)
-    # добавить проверку пользователя
-    msg = await message.answer(
-        text="Для генерации ключа введите email (название):\n 0 для случайного имени",
-        reply_markup=admin_cancel_kb(),
-    )
-    await state.update_data(last_msg_id=msg.message_id)
-    await state.set_state(NewKey.email)
+    try:
+        telegram_id = message.from_user.id if message.text == "0" else int(message.text)
+        user = await UserService.find_one_or_none(telegram_id=telegram_id)
+
+        if user is None:
+            msg = await message.answer(
+                text="Пользователь с таким id не найден\nВведите другой id",
+                reply_markup=cancel_kb_admin(),
+            )
+            await state.update_data(last_msg_id=msg.message_id)
+            return
+
+        await state.update_data(telegram_id=telegram_id)
+        await del_msg(message, state)
+
+        msg = await message.answer(
+            text="Для генерации ключа введите email (название):\n 0 для случайного имени",
+            reply_markup=cancel_kb_admin(),
+        )
+        await state.update_data(last_msg_id=msg.message_id)
+        await state.set_state(NewKey.email)
+    except ValueError:
+        msg = await message.answer(
+            text="Введите корректный telegram id пользователя",
+            reply_markup=key_kb_admin(),
+        )
+        await state.update_data(last_msg_id=msg.message_id)
 
 
 @router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), NewKey.email)
@@ -335,7 +377,7 @@ async def admin_get_email_keygen(message: Message, state: FSMContext):
 
     msg = await message.answer(
         text="Введите число для ограничения IP\n 0 - безлимитное число пользователей",
-        reply_markup=admin_cancel_kb(),
+        reply_markup=cancel_kb_admin(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -344,30 +386,47 @@ async def admin_get_email_keygen(message: Message, state: FSMContext):
 
 @router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), NewKey.limitIp)
 async def admin_get_limit(message: Message, state: FSMContext):
-    await state.update_data(limitIp=int(message.text))
-    await del_msg(message, state)
+    try:
+        limitIp = int(message.text)
+        await state.update_data(limitIp=limitIp)
+        await del_msg(message, state)
 
-    msg = await message.answer(
-        text="Введите число для ограничения объема трафика в битах\n 0 - безлимитный объем трафика",
-        reply_markup=admin_cancel_kb(),
-    )
+        msg = await message.answer(
+            text="Введите число для ограничения объема трафика в битах\n 0 - безлимитный объем трафика",
+            reply_markup=cancel_kb_admin(),
+        )
 
-    await state.update_data(last_msg_id=msg.message_id)
-    await state.set_state(NewKey.totalGB)
+        await state.update_data(last_msg_id=msg.message_id)
+        await state.set_state(NewKey.totalGB)
+    except ValueError:
+        msg = await message.answer(
+            text="Введите корректное число пользователей",
+            reply_markup=cancel_kb_admin(),
+        )
+        await state.update_data(last_msg_id=msg.message_id)
 
 
 @router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), NewKey.totalGB)
 async def admin_get_totalgb(message: Message, state: FSMContext):
-    await state.update_data(totalGB=int(message.text))
-    await del_msg(message, state)
+    try:
+        totalGb = int(message.text)
+        await state.update_data(totalGB=totalGb)
+        await del_msg(message, state)
 
-    servers = await ServerService.get_servers_list()
+        servers = await ServerService.get_servers_list()
 
-    msg = await message.answer(
-        text="Введите название сервера", reply_markup=admin_servers_inline_kb(servers)
-    )
+        msg = await message.answer(
+            text="Введите название сервера",
+            reply_markup=admin_servers_kb(servers),
+        )
 
-    await state.update_data(last_msg_id=msg.message_id)
+        await state.update_data(last_msg_id=msg.message_id)
+    except ValueError:
+        msg = await message.answer(
+            text="Введите корректное объем трафика",
+            reply_markup=cancel_kb_admin(),
+        )
+        await state.update_data(last_msg_id=msg.message_id)
 
 
 @router.callback_query(
@@ -379,9 +438,10 @@ async def admin_get_server(call: CallbackQuery, state: FSMContext):
 
     data = await state.get_data()
     await bot.delete_message(chat_id=call.from_user.id, message_id=data["last_msg_id"])
+
     msg = await call.message.answer(
         text="Введите дату действия ключа в формате (год-число-месяц)\n 0 - неограниченное время пользования",
-        reply_markup=admin_cancel_kb(),
+        reply_markup=cancel_kb_admin(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -395,8 +455,16 @@ async def admin_get_email(message: Message, state: FSMContext):
     if date == "0":
         expiryTime = "0"
     else:
-        date_obj = datetime.strptime(date, "%Y-%d-%m")
-        expiryTime = str(date_obj.timestamp() * 1000)
+        try:
+            date_obj = datetime.strptime(date, "%Y-%d-%m")
+            expiryTime = str(int(date_obj.timestamp() * 1000))
+        except ValueError:
+            msg = await message.answer(
+                text="Введите корректный формат даты Год-Число-Месяц",
+                reply_markup=cancel_kb_admin(),
+            )
+            await state.update_data(last_msg_id=msg.message_id)
+            return
 
     await state.update_data(expiryTime=expiryTime)
     await del_msg(message, state)
@@ -412,7 +480,10 @@ async def admin_get_email(message: Message, state: FSMContext):
         f"Лимит трафика {'Безлимит' if data['totalGB'] == 0 else data['totalGB']}\n"
         f"Время действия {'Безлимит' if date == '0' else date}\n"
     )
-    msg = await message.answer(text=text, reply_markup=admin_kb_confirm_add_key())
+    msg = await message.answer(
+        text=text,
+        reply_markup=admin_kb_confirm_add_key(),
+    )
 
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(NewKey.confirm)
@@ -423,26 +494,31 @@ async def admin_get_email(message: Message, state: FSMContext):
 )
 async def admin_confirm_add_key(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    data["id"] = str(uuid.uuid4())
-    # await bot.delete_message(chat_id=call.from_user.id, message_id=data["last_msg_id"])
 
-    telegram_id = data["telegram_id"]
-
-    del data["last_msg_id"]
+    payload = KeyPayloadScheme(
+        id=str(uuid.uuid4()),
+        email=data["email"],
+        limitIp=data["limitIp"],
+        totalGb=data["totalGB"],
+        expiryTime=data["expiryTime"],
+    )
 
     try:
         info = await UserService.create_key(
-            telegram_id=telegram_id, server_name=data["server"], data=data
+            telegram_id=data["telegram_id"], server_name=data["server"], data=payload
         )
         if info:
             await call.message.edit_text(
-                text="Ключ успешно добавлен", reply_markup=admin_kb_key()
+                text="Ключ успешно добавлен",
+                reply_markup=key_kb_admin(),
             )
     except Exception as e:
-        logger.error(f"Ошибка при добавлении ключа из админки {e}")
-        await call.message.edit_text(
-            text="Ошибка при добавлении ключа", reply_markup=admin_kb_key()
+        logger.error(f"Error while adding key from admin panel {e}")
+        msg = await call.message.edit_text(
+            text="Ошибка при добавлении ключа",
+            reply_markup=key_kb_admin(),
         )
+        await state.update_data(last_msg_id=msg.message_id)
 
 
 @router.callback_query(
@@ -451,7 +527,8 @@ async def admin_confirm_add_key(call: CallbackQuery, state: FSMContext):
 async def admin_update_balance(call: CallbackQuery, state: FSMContext):
     await state.clear()
     msg = await call.message.edit_text(
-        text="input telegram id", reply_markup=admin_cancel_kb()
+        text="Введите telegram id пользователя",
+        reply_markup=cancel_kb_admin(),
     )
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(UpdateBalance.telegram_id)
@@ -463,28 +540,31 @@ async def admin_update_balance(call: CallbackQuery, state: FSMContext):
 async def admin_get_tg_id(message: Message, state: FSMContext):
     await del_msg(message, state)
     try:
-        telegram_id = message.text
+        telegram_id = int(message.text)
         await state.update_data(telegram_id=telegram_id)
 
-        user = await UserService.find_one_or_none(telegram_id=str(telegram_id))
+        user = await UserService.find_one_or_none(telegram_id=telegram_id)
+        if user is None:
+            msg = await message.answer(
+                text="Пользователь с таким id не найден\nВведите другой id",
+                reply_markup=cancel_kb_admin(),
+            )
+            await state.update_data(last_msg_id=msg.message_id)
+            return
 
-        if user:
-            msg = await message.answer(
-                text="Enter updated balance", reply_markup=admin_cancel_kb()
-            )
-            await state.update_data(last_msg_id=msg.message_id)
-            await state.set_state(UpdateBalance.balance)
-        else:
-            msg = await message.answer(
-                text="User not found, enter correct telegram id",
-                reply_markup=admin_cancel_kb(),
-            )
-            await state.update_data(last_msg_id=msg.message_id)
-            await state.set_state(UpdateBalance.telegram_id)
+        msg = await message.answer(
+            text="Enter updated balance", reply_markup=cancel_kb_admin()
+        )
+        await state.update_data(last_msg_id=msg.message_id)
+        await state.set_state(UpdateBalance.balance)
+
         # await del_msg(message, state)
 
     except ValueError:
-        await message.edit_text(text="Error. Input number (user ID)")
+        msg = await message.answer(
+            text="Введите корректный telegram id пользователя",
+            reply_markup=key_kb_admin(),
+        )
         return
 
 
@@ -498,9 +578,9 @@ async def admin_get_balance(message: Message, state: FSMContext):
         data = await state.get_data()
 
         text = (
-            f"Check all fields\n\n"
+            f"Проверьте введенные поля\n\n"
             f"Telegram ID: {data['telegram_id']}\n"
-            f"New balance: {data['balance']}\n"
+            f"Прибавка к балансу: {data['balance']}\n"
         )
 
         msg = await message.answer(
@@ -509,7 +589,10 @@ async def admin_get_balance(message: Message, state: FSMContext):
         await state.update_data(last_msg_id=msg.message_id)
         await state.set_state(UpdateBalance.confirm)
     except ValueError:
-        await message.answer(text="Error. Enter valid balance")
+        await message.answer(
+            text="Введите корректную сумму баланса",
+            reply_markup=cancel_kb_admin(),
+        )
         return
 
 
@@ -523,11 +606,11 @@ async def admin_confirm_update_balance(call: CallbackQuery, state: FSMContext):
 
     try:
         info = await UserService.update_balance(
-            telegram_id=str(data["telegram_id"]), balance=float(data["balance"])
+            telegram_id=data["telegram_id"], balance=float(data["balance"])
         )
         if info:
             await call.message.answer(
-                text="Updated successfully", reply_markup=admin_kb()
+                text="Баланс успешно обновлен", reply_markup=admin_kb()
             )
     except Exception as e:
         logger.error(f"Error while updating balance in admin panel {e}")
@@ -548,7 +631,10 @@ async def admin_add_key_user(call: CallbackQuery, state: FSMContext):
     F.data == "handler_promo", F.from_user.id.in_(settings.ADMINS_LIST)
 )
 async def admin_handler_promo(call: CallbackQuery):
-    await call.message.edit_text(text="Choose option", reply_markup=admin_kb_promo())
+    await call.message.edit_text(
+        text="Выберете действие",
+        reply_markup=promo_kb_admin(),
+    )
 
 
 @router.callback_query(F.data == "gen_promo", F.from_user.id.in_(settings.ADMINS_LIST))
@@ -556,7 +642,7 @@ async def admin_gen_promo(call: CallbackQuery, state: FSMContext):
     await state.clear()
     msg = await call.message.edit_text(
         text="Для генерации промокода введите Код активации",
-        reply_markup=admin_cancel_kb(),
+        reply_markup=cancel_kb_admin(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -569,7 +655,8 @@ async def admin_get_code(message: Message, state: FSMContext):
     await del_msg(message, state)
 
     msg = await message.answer(
-        text=("Введите количество активаций промокода"), reply_markup=admin_cancel_kb()
+        text="Введите количество активаций промокода",
+        reply_markup=cancel_kb_admin(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -584,13 +671,17 @@ async def admin_get_amount(message: Message, state: FSMContext):
         await state.update_data(count=count)
 
         msg = await message.answer(
-            text="Введите бонус при активации промокода", reply_markup=admin_cancel_kb()
+            text="Введите бонус при активации промокода",
+            reply_markup=cancel_kb_admin(),
         )
 
         await state.update_data(last_msg_id=msg.message_id)
         await state.set_state(NewPromo.bonus)
     except ValueError:
-        await message.answer(text="Введите корректное количество активаций")
+        await message.answer(
+            text="Введите корректное количество активаций",
+            reply_markup=cancel_kb_admin(),
+        )
 
 
 @router.message(F.text, F.from_user.id.in_(settings.ADMINS_LIST), NewPromo.bonus)
@@ -609,12 +700,18 @@ async def admin_get_bonus(message: Message, state: FSMContext):
             f"Бонус при активации {data['bonus']}"
         )
 
-        msg = await message.answer(text=text, reply_markup=admin_kb_confirm_gen_promo())
+        msg = await message.answer(
+            text=text,
+            reply_markup=admin_kb_confirm_gen_promo(),
+        )
 
         await state.update_data(last_msg_id=msg.message_id)
         await state.set_state(NewPromo.confirm)
     except ValueError:
-        msg = await message.answer(text="Введите корректное число")
+        msg = await message.answer(
+            text="Введите корректный баланс",
+            reply_markup=cancel_kb_admin(),
+        )
 
 
 @router.callback_query(
@@ -625,10 +722,11 @@ async def admin_get_bonus(message: Message, state: FSMContext):
 async def admin_confirm_get_promo(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     # await bot.delete_message(chat_id=call.from_user.id, message_id=data['last_msg_id'])
-    del data["last_msg_id"]
 
     payload = PromocodeScheme(
-        code=data["code"], count=data["count"], bonus=data["bonus"]
+        code=data["code"],
+        count=data["count"],
+        bonus=data["bonus"],
     )
 
     try:
@@ -636,12 +734,14 @@ async def admin_confirm_get_promo(call: CallbackQuery, state: FSMContext):
         if info:
             logger.info("Промокод успешно добавлен")
             await call.message.edit_text(
-                text="Промокод успешно добавлен", reply_markup=admin_kb()
+                text="Промокод успешно добавлен",
+                reply_markup=admin_kb(),
             )
     except Exception as e:
-        logger.error(f"Ошибка при добавлении промокода {e}")
+        logger.error(f"Error while adding promo {e}")
         await call.message.edit_text(
-            text="Ошибка при добавлении промокода", reply_markup=admin_kb()
+            text="Ошибка при добавлении промокода",
+            reply_markup=admin_kb(),
         )
 
 
@@ -653,7 +753,8 @@ async def admin_get_all_promo(call: CallbackQuery):
 
     if not promocodes_info:
         await call.message.edit_text(
-            text="Нет добавленных промокодов", reply_markup=admin_kb_promo()
+            text="Нет добавленных промокодов",
+            reply_markup=promo_kb_admin(),
         )
     else:
         text = "Все выпущенные промокоды\n\n"
@@ -663,7 +764,10 @@ async def admin_get_all_promo(call: CallbackQuery):
                 f"Осталось активаций {promo.count}\n"
                 f"Бонус пополнения {promo.bonus}\n\n"
             )
-        await call.message.edit_text(text=text, reply_markup=admin_kb_promo())
+        await call.message.edit_text(
+            text=text,
+            reply_markup=promo_kb_admin(),
+        )
 
 
 @router.callback_query(
@@ -674,7 +778,7 @@ async def admin_start_spam(call: CallbackQuery, state: FSMContext):
 
     msg = await call.message.edit_text(
         text="Введите сообщение для рассылки сообщений\n(поддерживается упрощенное html форматирование)",
-        reply_markup=admin_cancel_kb(),
+        reply_markup=cancel_kb_admin(),
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -688,9 +792,10 @@ async def admin_get_message(message: Message, state: FSMContext):
     await state.update_data(spam_message=message.text)
     await del_msg(message, state)
 
-    text = f"Проверьте введенные данные\n\n{message.text}"
-
-    msg = await message.answer(text=text, reply_markup=admin_kb_confirm_spam_admins())
+    msg = await message.answer(
+        text=f"Проверьте введенные данные\n\n{message.text}",
+        reply_markup=admin_kb_confirm_spam_admins(),
+    )
 
     await state.update_data(last_msg_id=msg.message_id)
     await state.set_state(SpamMessage.confirm)
@@ -704,7 +809,7 @@ async def admin_get_message(message: Message, state: FSMContext):
 async def admin_confirm_spam_admins(call: CallbackQuery, state: FSMContext):
     await call.message.edit_text(
         text="Выберете кому произвести отправку сообщений",
-        reply_markup=admin_kb_messages(),
+        reply_markup=spam_kb_admin(),
     )
 
 
@@ -712,33 +817,32 @@ async def admin_confirm_spam_admins(call: CallbackQuery, state: FSMContext):
 async def admin_spam_admins(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     try:
-        msg = MessageScheme(
-            message=data["spam_message"]
-        )
+        msg = MessageScheme(message=data["spam_message"])
         await broker.publish(msg, "admin_msg")
-        logger.info("Генерация рассылки сообщений администраторам")
+        logger.info("Generation spam messages for admins")
+
         await call.message.edit_text(
-            text="Сообщения успешно разосланы", reply_markup=admin_kb()
+            text="Сообщения успешно разосланы",
+            reply_markup=admin_kb(),
         )
     except Exception as e:
-        logger.error(f"Ошибка при генерации отправки сообщения администраторам {e}")
+        logger.error(f"Error spam messages for admins {e}")
 
 
 @router.callback_query(F.data == "spam_users", F.from_user.id.in_(settings.ADMINS_LIST))
 async def admin_spam_users(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     try:
-        msg = MessageScheme(
-            message=data["spam_message"]
-        )
-
+        msg = MessageScheme(message=data["spam_message"])
         await broker.publish(msg, "users_msg")
-        logger.info("Генерация рассылки сообщений пользователям")
+        logger.info("Generation spam messages for users")
+
         await call.message.edit_text(
-            text="Сообщения успешно разосланы", reply_markup=admin_kb()
+            text="Сообщения успешно разосланы",
+            reply_markup=admin_kb(),
         )
     except Exception as e:
-        logger.error(f"Ошибка при генерации отправки сообщений пользователям {e}")
+        logger.error(f"Error spam messages for users {e}")
 
 
 @router.callback_query(
@@ -746,7 +850,7 @@ async def admin_spam_users(call: CallbackQuery, state: FSMContext):
 )
 async def admin_send_message(call: CallbackQuery, state: FSMContext):
     msg = await call.message.edit_text(
-        text="Введите ID пользователя", reply_markup=admin_cancel_kb()
+        text="Введите ID пользователя", reply_markup=cancel_kb_admin()
     )
 
     await state.update_data(last_msg_id=msg.message_id)
@@ -759,24 +863,35 @@ async def admin_send_message(call: CallbackQuery, state: FSMContext):
 async def admin_spam_get_telegram_id(message: Message, state: FSMContext):
     await del_msg(message, state)
     try:
-        user_id = message.text
+        user_id = int(message.text)
         user = await UserService.find_one_or_none(telegram_id=user_id)
-        if user:
-            await state.update_data(telegram_id=user_id)
-
-            data = await state.get_data()
-
-            msg = MessageScheme(
-                message=data["spam_message"],
-                telegram_id=data["telegram_id"],
-            )
-
-            await broker.publish(msg, "send_msg")
-            logger.info("Генерация отправки сообщения")
-        else:
+        if user is None:
             msg = await message.answer(
-                text="Пользователь не найден, введите другой ID",
-                reply_markup=admin_cancel_kb(),
+                text="Пользователь с таким id не найден\nВведите другой id",
+                reply_markup=cancel_kb_admin(),
             )
+            await state.update_data(last_msg_id=msg.message_id)
+            return
+
+        data = await state.get_data()
+
+        msg = MessageScheme(
+            message=data["spam_message"],
+            telegram_id=user_id,
+        )
+
+        await broker.publish(msg, "send_msg")
+        logger.info("Generation message to user")
+
+        await message.answer(
+            text="Сообщения успешно отправлено",
+            reply_markup=admin_kb(),
+        )
+
+    except ValueError:
+        await message.answer(
+            text="Введите корректный telegram id пользователя",
+            reply_markup=key_kb_admin(),
+        )
     except Exception as e:
-        logger.error(f"Ошибка при генерации отправки сообщения пользователю {e}")
+        logger.error(f"Error send message to user {e}")

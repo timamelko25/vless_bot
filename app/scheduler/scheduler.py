@@ -2,9 +2,9 @@ from datetime import datetime, timezone, timedelta
 
 from loguru import logger
 
-from app.config import broker, bot
+from app.config import broker
 from app.entities.keys.service import KeyService
-from app.entities.users.kb import get_key_inline_kb
+from app.entities.users.kb import top_up_kb
 from app.entities.users.service import UserService
 from app.entities.keys.schemas import KeyPayloadScheme
 from app.broker.schemas import MessageScheme
@@ -31,7 +31,7 @@ async def subscribe_30_day_expire():
     for user in users:
         for key in user.keys:
             key_expire_time = datetime.fromtimestamp(
-                int(key.expires_at)//1000, tz=timezone.utc
+                int(key.expires_at) // 1000, tz=timezone.utc
             )
             diff = key_expire_time - current_time_utc
             logger.info(key_expire_time)
@@ -44,17 +44,18 @@ async def subscribe_30_day_expire():
             ):
                 msg = MessageScheme(
                     message=(
-                        "Через 3 дня будет списана сумма за ключи\n"
-                        "Проверьте сумму баланса для оплаты ключа\n"
-                        "Иначе ключ будет деактивирован до пополнения баланса"
+                        "⏳ <b>Через 3 дня</b> будет списана сумма за ключи.\n"
+                        "🔍 Проверьте <b>сумму баланса</b> для оплаты ключа.\n"
+                        "⚠️ В противном случае ключ будет <b>деактивирован</b> до пополнения баланса."
                     ),
                     telegram_id=user.telegram_id,
-                    keyboard=get_key_inline_kb(),
+                    keyboard=top_up_kb(),
                 )
                 await broker.publish(msg, "send_msg")
 
             elif diff <= timedelta(days=1):
-                new_time = current_time_utc + timedelta(days=30)
+                next_month = current_time_utc + timedelta(days=30)
+                new_time = next_month.replace(hour=0, minute=0, second=0, microsecond=0)
                 date = int(new_time.timestamp() * 1000)
                 if user.balance >= 150.0:
                     await UserService.update_balance(
@@ -98,9 +99,11 @@ async def subscribe_30_day_expire():
                     info = await KeyService.update_key(data=data, server=key.server)
                     if info:
                         msg = MessageScheme(
-                            message=f"Недостаточно средств для оплаты ключа {key.email}\n"
-                            "Пополните баланс для возобновления работы ключа",
+                            message=(
+                                f"❌ <b>Недостаточно средств</b> для оплаты ключа <i>{key.email}</i>\n"
+                                "💰 <b>Пополните баланс</b>, чтобы возобновить работу ключа."
+                            ),
                             telegram_id=user.telegram_id,
-                            keyboard=get_key_inline_kb(),
+                            keyboard=top_up_kb(),
                         )
                         await broker.publish(msg, "send_msg")

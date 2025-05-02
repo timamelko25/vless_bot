@@ -13,7 +13,7 @@ from app.entities.users.router_pay import router as user_router_pay
 from app.entities.keys.router_key_get import router as key_router_get
 from app.entities.admin.router import router as admin_router
 from app.broker.router_consumer import router as broker_router
-from app.entities import *
+from app.entities import User, HistoryPayment, Key, Promocode, Server  # noqa: F401
 from app.scheduler.scheduler import subscribe_30_day_expire
 
 
@@ -48,8 +48,8 @@ async def start_tracking():
     try:
         scheduler.add_job(
             func=subscribe_30_day_expire,
-            trigger="interval",
-            seconds=60,
+            trigger="cron",
+            hour=15,
             id="check_subscription",
             replace_existing=True,
             misfire_grace_time=300

@@ -10,9 +10,9 @@ from app.config import broker
 from app.entities.servers.service import ServerService
 from app.entities.users.service import UserService
 from app.entities.users.kb import (
-    servers_inline_kb,
-    keys_inline_kb,
-    get_key_inline_kb,
+    servers_kb,
+    instructions_kb,
+    top_up_kb,
     kb_confirm_get_key,
 )
 
@@ -27,12 +27,12 @@ async def get_servers(call: CallbackQuery | Message):
         if isinstance(call, CallbackQuery):
             await call.message.edit_text(
                 "<b>🌍 Выберете сервер</b>",
-                reply_markup=servers_inline_kb(servers_list),
+                reply_markup=servers_kb(servers_list),
             )
         else:
             await call.edit_text(
                 "<b>🌍 Выберете сервер</b>",
-                reply_markup=servers_inline_kb(servers_list),
+                reply_markup=servers_kb(servers_list),
             )
 
 
@@ -41,13 +41,13 @@ async def get_key_confirm(call: CallbackQuery, state: FSMContext):
     _, server_name = call.data.split(":", 1)
     await state.update_data(server_name=server_name)
 
-    user = await UserService.find_one_or_none(telegram_id=str(call.from_user.id))
+    user = await UserService.find_one_or_none(telegram_id=call.from_user.id)
     text = (
-        f"Текущий баланс {user.balance}\n\n"
-        f"Для покупки ключа необходимо 150 ₽\n\n"
-        f"Ключ будет куплен для страны {server_name}\n"
-        f"До 3 устройств на 1 ключ\n"
-        f"Лимит трафика на 1 ключ 100 Gb\n"
+        f"<b>💼 Текущий баланс:</b> <i>{user.balance} ₽</i>\n\n"
+        f"<b>Стоимость ключа:</b> <i>150 ₽</i>\n"
+        f"<b>Страна подключения:</b> <i>{server_name}</i>\n\n"
+        f"Один ключ поддерживает до <b>3 устройств</b>\n"
+        f"Лимит трафика: <b>100 ГБ</b> на ключ\n"
     )
 
     await call.message.edit_text(
@@ -57,13 +57,14 @@ async def get_key_confirm(call: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "get_key")
 async def get_key(call: CallbackQuery, state: FSMContext):
-    user = await UserService.find_one_or_none(telegram_id=str(call.from_user.id))
+    user = await UserService.find_one_or_none(telegram_id=call.from_user.id)
+
     data = await state.get_data()
     server_name = data.get("server_name")
 
     if user.balance >= 150.0:
         key = await UserService.create_key(
-            telegram_id=str(call.from_user.id), server_name=server_name
+            telegram_id=call.from_user.id, server_name=server_name
         )
 
         logger.info(f"User {user.telegram_id} bought key {key.get('email')}")
@@ -72,7 +73,7 @@ async def get_key(call: CallbackQuery, state: FSMContext):
         date = datetime.fromtimestamp(date / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
 
         text = (
-            "🎉 <b>Поздравляю!</b> Вы приобрели ключ!\n\n"
+            "🎉Вы приобрели ключ!\n\n"
             f"🌍 <b>Страна покупки:</b> <code>{server_name}</code>\n"
             f"📅 <b>Срок действия:</b> <code>{date}</code>\n\n"
             "🔑 <b>Ваш ключ:</b>\n"
@@ -91,17 +92,17 @@ async def get_key(call: CallbackQuery, state: FSMContext):
 
         await call.message.edit_text(
             text=text,
-            reply_markup=keys_inline_kb(),
+            reply_markup=instructions_kb(),
         )
     else:
         text = (
-            f"❌ <b>Недостаточно средств!</b>\n\n"
-            f"Текущий баланс {user.balance}\n"
-            f"Цена ключа <b>150 рублей</b> за 1 шт.\n"
-            f"💰 Сперва пополните баланс, чтобы получить ключ."
+            "❌ <b>Недостаточно средств!</b>\n\n"
+            f"<b>Текущий баланс:</b> <i>{user.balance} ₽</i>\n"
+            f"<b>Цена ключа:</b> <b>150 рублей</b> за 1 шт.\n\n"
+            "<b>Пополните баланс</b>, чтобы получить ключ."
         )
 
         await call.message.edit_text(
             text=text,
-            reply_markup=get_key_inline_kb(),
+            reply_markup=top_up_kb(),
         )

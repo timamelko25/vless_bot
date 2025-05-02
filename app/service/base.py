@@ -7,7 +7,7 @@ from sqlalchemy.orm import class_mapper
 from app.database import async_session_maker
 
 
-class BaseService():
+class BaseService:
     """Base service class providing common database operations for SQLAlchemy models.
 
     This class should be subclassed, and the `model` attribute must be set to a SQLAlchemy
@@ -31,21 +31,21 @@ class BaseService():
     @classmethod
     async def find_all(cls, **filter_by):
         async with async_session_maker() as session:
-            query = select(cls.model).filter_by(**filter_by) # type: ignore
+            query = select(cls.model).filter_by(**filter_by)  # type: ignore
             result = await session.execute(query)
             return result.scalars().all()
 
     @classmethod
     async def find_one_or_none(cls, **filter_by):
         async with async_session_maker() as session:
-            query = select(cls.model).filter_by(**filter_by) # type: ignore
+            query = select(cls.model).filter_by(**filter_by)  # type: ignore
             result = await session.execute(query)
             return result.scalar_one_or_none()
 
     @classmethod
     async def add(cls, **values):
         async with async_session_maker() as session:
-            new_instance = cls.model(**values) # type: ignore
+            new_instance = cls.model(**values)  # type: ignore
             session.add(new_instance)
             await session.commit()
             return new_instance
@@ -54,7 +54,7 @@ class BaseService():
     async def update(cls, filter_by: Dict, **values) -> int:
         async with async_session_maker() as session:
             query = (
-                sqlalchemy_update(cls.model) # type: ignore
+                sqlalchemy_update(cls.model)  # type: ignore
                 .where(*[getattr(cls.model, k) == v for k, v in filter_by.items()])
                 .values(**values)
                 .execution_options(synchronize_session="fetch")
@@ -69,7 +69,7 @@ class BaseService():
             if not delete_all and not filter_by:
                 raise ValueError("Enter at least 1 parameter")
 
-            query = sqlalchemy_delete(cls.model).filter_by(**filter_by) # type: ignore
+            query = sqlalchemy_delete(cls.model).filter_by(**filter_by)  # type: ignore
             result = await session.execute(query)
             await session.commit()
             return result.rowcount

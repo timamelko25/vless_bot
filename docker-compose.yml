@@ -34,7 +34,7 @@ services:
     ports:
       - "5431:5432"
     volumes:
-      - .:/var/db/pgdata
+      - .pgdata:/var/lib/postgresql/data
     deploy:
       resources:
         limits:
@@ -104,7 +104,7 @@ services:
       - REDIS_USER=${REDIS_USER}
       - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
     ports:
-      - "6380:6379"
+      - "6379:6379"
     volumes:
       - redisdata:/data
     deploy:

@@ -16,7 +16,7 @@ def admin_kb() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def admin_kb_user() -> InlineKeyboardMarkup:
+def user_kb_admin() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="💰 Пополнить баланс", callback_data="upd_balance_user")
     kb.button(text="🔑 Добавить ключ пользователю", callback_data="add_key_user")
@@ -26,7 +26,7 @@ def admin_kb_user() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def admin_kb_server() -> InlineKeyboardMarkup:
+def server_kb_admin() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="➕ Добавить сервер", callback_data="add_server_admin")
     kb.button(text="Все сервера", callback_data="get_servers_admin")
@@ -36,14 +36,14 @@ def admin_kb_server() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def admin_kb_del_server(name) -> InlineKeyboardMarkup:
+def del_server_kb_admin(name) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="Удалить сервер", callback_data=f"del_server_admin:{name}")
     kb.adjust(1)
     return kb.as_markup()
 
 
-def admin_kb_key() -> InlineKeyboardMarkup:
+def key_kb_admin() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="🔑 Получить все ключи", callback_data="get_all_keys_admin")
     kb.button(text="🔑 Сгенерировать ключ", callback_data="generate_key_admin")
@@ -53,7 +53,7 @@ def admin_kb_key() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def admin_kb_key_options(key_id: str) -> InlineKeyboardMarkup:
+def key_option_kb_admin(key_id: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(
         text="Сбросить время жизни", callback_data=f"reset_param:{key_id}:expiryTime"
@@ -63,7 +63,7 @@ def admin_kb_key_options(key_id: str) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def admin_kb_promo() -> InlineKeyboardMarkup:
+def promo_kb_admin() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="Выпустить промокод", callback_data="gen_promo")
     kb.button(text="Получить все промокоды", callback_data="get_all_promo")
@@ -72,7 +72,7 @@ def admin_kb_promo() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def admin_kb_messages() -> InlineKeyboardMarkup:
+def spam_kb_admin() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="Рассылка сообщений пользователям", callback_data="spam_users")
     kb.button(text="Рассылка сообщений администраторам", callback_data="spam_admins")
@@ -82,7 +82,7 @@ def admin_kb_messages() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def admin_kb_current_key() -> InlineKeyboardMarkup:
+def current_key_kb_admin() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="🗑 Удалить ключ", callback_data="del_key_admin")
     kb.button(text="✏️ Редактировать ключ", callback_data="edit_key_admin")
@@ -132,14 +132,14 @@ def admin_kb_confirm_spam_admins() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def admin_cancel_kb() -> InlineKeyboardMarkup:
+def cancel_kb_admin() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="❌ Отмена", callback_data="cancel")
     kb.adjust(1)
     return kb.as_markup()
 
 
-def admin_servers_inline_kb(servers: List[str]) -> InlineKeyboardMarkup:
+def admin_servers_kb(servers: List[str]) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for server in servers:
         kb.button(text=f"🌐 {server}", callback_data=f"admin_confirm:{server}")

@@ -1,4 +1,5 @@
 import aiohttp
+import asyncio
 import json
 import uuid
 
@@ -7,54 +8,47 @@ from loguru import logger
 from app.config import settings
 from app.entities.keys.schemas import KeyPayloadScheme
 
+MAX_RETRIES = 3
+RETRY_DELAY = 2
 
-async def open_session(url):
-    """Открыть сессию с панелью для запросов"""
+async def open_session(url: str):
+    """Открыть сессию с панелью для запросов с ретраями"""
 
     data = {"username": settings.VLESS_USERNAME, "password": settings.VLESS_PASSWORD}
-
     path = "login"
-    session = aiohttp.ClientSession()
 
-    try:
-        async with session.post(url=url + path, json=data, ssl=False) as response:
-            if response.status == 200:
-                data = await response.json()
-                return session, response.cookies
-            else:
-                logger.warning(f"Login failed {response.status}")
-                await session.close()
-                return {}
-    except Exception as e:
-        logger.error(f"Error login: {e}")
-        await session.close()
-        return {}
+    for attempt in range(1, MAX_RETRIES + 1):
+        session = aiohttp.ClientSession()
+        try:
+            async with session.post(url=url + path, json=data, ssl=False) as response:
+                if response.status == 200:
+                    logger.success(f"Login successful on attempt {attempt}")
+                    return session, response.cookies
+                else:
+                    logger.warning(f"Login failed (status={response.status}) on attempt {attempt}")
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            logger.error(f"Attempt {attempt} failed with error: {e}")
+
+    logger.critical("All attempts to login failed.")
+    return None, None
 
 
-async def get_inbounds(url: str) -> dict:
+async def get_inbounds(session, cookies, url: str) -> dict:
     """Получить список всех подключений по протоколам"""
 
     path = "panel/api/inbounds/list"
-
-    session, cookies = await open_session(url)
-    if session is None:
-        logger.error("Can`t create session while get inbounds")
-        return {}
 
     try:
         async with session.get(url=url + path, cookies=cookies, ssl=False) as response:
             if response.status == 200:
                 data = await response.json()
                 logger.info("Data from panel got successfully")
-                await session.close()
                 return data
             else:
                 logger.warning(f"Failed to fetch inbounds {response.status}")
-                await session.close()
                 return {}
     except Exception as e:
         logger.error(f"Error inbound: {e}")
-        await session.close()
         return {}
 
 
@@ -79,7 +73,7 @@ async def get_inbounds(url: str) -> dict:
 #         return {}
 
 
-async def add_client(url: str, data: KeyPayloadScheme):
+async def add_client(session, cookies, url: str, data: KeyPayloadScheme):
     """Добавить нового клиента"""
 
     path = "panel/api/inbounds/addClient"
@@ -108,11 +102,6 @@ async def add_client(url: str, data: KeyPayloadScheme):
 
     headers = {"Accept": "application/json"}
 
-    session, cookies = await open_session(url)
-    if session is None:
-        logger.error("Can`t create session while adding client")
-        return {}
-
     try:
         async with session.post(
             url=url + path, headers=headers, cookies=cookies, data=payload, ssl=False
@@ -120,19 +109,16 @@ async def add_client(url: str, data: KeyPayloadScheme):
             if response.status == 200:
                 info = await response.json()
                 logger.info(f"New client added to panel {data.email}")
-                await session.close()
                 return info
             else:
                 logger.warning(f"Failed to add client {response.status}")
-                await session.close()
                 return {}
     except Exception as e:
         logger.error(f"Error add client: {e}")
-        await session.close()
         return {}
 
 
-async def update_client(url: str, uuid: str, data: KeyPayloadScheme):
+async def update_client(session, cookies, url: str, uuid: str, data: KeyPayloadScheme):
     """""Обновить информацию о клиенте по ID""" ""
 
     path = f"panel/api/inbounds/updateClient/{uuid}"
@@ -161,11 +147,6 @@ async def update_client(url: str, uuid: str, data: KeyPayloadScheme):
 
     headers = {"Accept": "application/json"}
 
-    session, cookies = await open_session(url)
-    if session is None:
-        logger.error("Can`t create session while updating client")
-        return {}
-
     try:
         async with session.post(
             url=url + path, headers=headers, cookies=cookies, data=payload, ssl=False
@@ -173,29 +154,21 @@ async def update_client(url: str, uuid: str, data: KeyPayloadScheme):
             if response.status == 200:
                 info = await response.json()
                 logger.info(f"Client updated with new payload {payload}")
-                await session.close()
                 return info
             else:
                 logger.warning(f"Failed to update client inbound {response.status}")
-                await session.close()
                 return {}
     except Exception as e:
         logger.error(f"Error update client inbound {e}")
-        await session.close()
         return {}
 
 
-async def delete_client(url: str, inboundId: str, uuid: str):
+async def delete_client(session, cookies, url: str, inboundId: str, uuid: str):
     """Удалить существующего клиента"""
 
     path = f"panel/api/inbounds/{inboundId}/delClient/{uuid}"
 
     headers = {"Accept": "application/json"}
-
-    session, cookies = await open_session(url)
-    if session is None:
-        logger.error("Can`t create session while delete client")
-        return {}
 
     try:
         async with session.post(
@@ -204,11 +177,9 @@ async def delete_client(url: str, inboundId: str, uuid: str):
             if response.status == 200:
                 info = await response.json()
                 logger.info(f"Client {uuid} delete successfully from panel")
-                await session.close()
                 return info
             else:
                 logger.warning(f"Failed to delete client from panel {uuid}")
-                await session.close()
                 return {}
     except Exception as e:
         logger.error(f"Error while deleting client {e}")
