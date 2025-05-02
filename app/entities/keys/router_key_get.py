@@ -51,7 +51,8 @@ async def get_key_confirm(call: CallbackQuery, state: FSMContext):
     )
 
     await call.message.edit_text(
-        text=text, reply_markup=kb_confirm_get_key(user.balance)
+        text=text,
+        reply_markup=kb_confirm_get_key(user.balance),
     )
 
 
@@ -63,10 +64,17 @@ async def get_key(call: CallbackQuery, state: FSMContext):
     server_name = data.get("server_name")
 
     if user.balance >= 150.0:
+        await call.message.edit_text(text="Идет генерация ключа")
+
         key = await UserService.create_key(
             telegram_id=call.from_user.id, server_name=server_name
         )
-
+        
+        if not key:
+            await call.message.edit_text(
+                text="Ошибка генерации ключа, попробуйте снова",
+                reply_markup=kb_confirm_get_key(user.balance),
+            )
         logger.info(f"User {user.telegram_id} bought key {key.get('email')}")
 
         date = int(key.get("expires_at"))

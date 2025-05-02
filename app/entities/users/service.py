@@ -72,7 +72,7 @@ class UserService(BaseService):
         telegram_id: int,
         server_name: str,
         data: KeyPayloadScheme | None = None,
-    ) -> Dict:
+    ) -> Dict | None:
         async with async_session_maker() as session:
             user = await cls.find_one_or_none(telegram_id=telegram_id)
             server = await ServerService.find_one_or_none(name=server_name)
@@ -92,7 +92,9 @@ class UserService(BaseService):
                 )
 
             info = await KeyService.generate_key(data, server)
-
+            if info is None:
+                return
+            
             new_key = Key(
                 user_id=user.id,
                 server_id=info.server_id,

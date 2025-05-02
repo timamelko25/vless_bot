@@ -137,7 +137,7 @@ async def page_home(call: CallbackQuery):
 
 @router.callback_query(F.data == "get_profile")
 async def get_user_profile(call: CallbackQuery):
-    logger.info("here")
+
     tg_id = call.from_user.id
     user = await UserService.find_one_or_none(telegram_id=tg_id)
     date = await UserService.find_min_date_expire(telegram_id=tg_id)
