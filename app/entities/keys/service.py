@@ -58,7 +58,6 @@ class KeyService(BaseService):
             await session.close()
 
     @classmethod
-    @connection()
     async def update_key(
         cls, data: KeyPayloadScheme, server: Server
     ):

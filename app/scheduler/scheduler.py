@@ -34,9 +34,6 @@ async def subscribe_30_day_expire():
                 int(key.expires_at) // 1000, tz=timezone.utc
             )
             diff = key_expire_time - current_time_utc
-            logger.info(key_expire_time)
-            logger.info(current_time_utc)
-            logger.info(diff)
             if (
                 timedelta(days=3) - timedelta(hours=7)
                 <= diff
