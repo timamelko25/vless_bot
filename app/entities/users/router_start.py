@@ -127,7 +127,9 @@ async def profile_command(message: Message, state: FSMContext):
 
 
 @router.callback_query(F.data == "home")
-async def page_home(call: CallbackQuery):
+async def page_home(call: CallbackQuery, state: FSMContext):
+    await state.clear()
+    
     await call.message.delete()
     await call.message.answer(
         text=HOME_TEXT(),
