@@ -14,3 +14,4 @@ wheels/
 log.txt
 task.md
 .pgdata
+.env.test

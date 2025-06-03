@@ -129,7 +129,7 @@ async def profile_command(message: Message, state: FSMContext):
 @router.callback_query(F.data == "home")
 async def page_home(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    
+
     await call.message.delete()
     await call.message.answer(
         text=HOME_TEXT(),
@@ -139,7 +139,6 @@ async def page_home(call: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "get_profile")
 async def get_user_profile(call: CallbackQuery):
-
     tg_id = call.from_user.id
     user = await UserService.find_one_or_none(telegram_id=tg_id)
     date = await UserService.find_min_date_expire(telegram_id=tg_id)
@@ -279,6 +278,7 @@ async def get_all_user_keys(call: CallbackQuery):
 @router.callback_query(F.data.startswith("confirm_del:"))
 async def confirm_delete_key(call: CallbackQuery):
     await call.message.edit_text(text="Ключ удаляется 🔄")
+    
     key_email = call.data.split(":")[1]
     server_name = call.data.split(":")[2]
 

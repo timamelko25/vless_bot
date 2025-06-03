@@ -1,5 +1,6 @@
 import asyncio
 from logging.config import fileConfig
+import os
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
@@ -19,7 +20,8 @@ from app.entities.promocodes.models import Promocode  # noqa: F401
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_main_option('sqlalchemy.url', PG_URL)
+db_url = os.getenv("ALEMBIC_DATABASE_URL", config.get_main_option("sqlalchemy.url"))
+config.set_main_option("sqlalchemy.url", db_url) # type: ignore
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

@@ -85,6 +85,8 @@ class Settings(BaseSettings):
 settings = Settings()  # type: ignore
 
 PG_URL = settings.get_pg_url()
+os.environ["ALEMBIC_DATABASE_URL"] = PG_URL
+
 PG_JOBS_URL = settings.get_pg_jobs_url()
 REDIS_URL = settings.get_redis_url()
 

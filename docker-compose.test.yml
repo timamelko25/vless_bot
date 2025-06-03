@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  postgres_test:
+    image: postgres:latest
+    container_name: postgres_test
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: test_db
+    ports:
+      - "5430:5432"
+    volumes:
+      - pgdata_test:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d test_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+volumes:
+  pgdata_test:
+    driver: local
