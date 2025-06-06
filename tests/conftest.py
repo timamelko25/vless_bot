@@ -3,8 +3,7 @@ import sys
 import psycopg2
 import pytest
 import pytest_asyncio
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from .run_migrations import run_migrations
 import app.database

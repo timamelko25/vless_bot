@@ -38,6 +38,8 @@ class KeyService(BaseService):
             )
 
             return info
+        except Exception as e:
+            raise e
         finally:
             await session.close()
 

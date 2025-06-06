@@ -3,12 +3,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.entities.keys.models import Key
 from app.entities.servers.service import ServerService
 from app.service.base import BaseService
-from app.database import connection
 from app.entities.keys.service import KeyService
 from app.entities.keys.schemas import KeyPayloadScheme
 from app.entities.promocodes.service import PromocodeService
@@ -75,7 +73,12 @@ class UserService(BaseService):
     ) -> Dict | None:
         async with async_session_maker() as session:
             user = await cls.find_one_or_none(telegram_id=telegram_id)
+            if user is None:
+                return
             server = await ServerService.find_one_or_none(name=server_name)
+            if server is None:
+                return
+
             if data is None:
                 current_time = datetime.now(timezone.utc).replace(
                     hour=0, minute=0, second=0, microsecond=0
@@ -94,7 +97,7 @@ class UserService(BaseService):
             info = await KeyService.generate_key(data, server)
             if info is None:
                 return
-            
+
             new_key = Key(
                 user_id=user.id,
                 server_id=info.server_id,
@@ -111,52 +114,58 @@ class UserService(BaseService):
             session.add(new_key)
 
             await cls.update(
-                filter_by={"telegram_id": telegram_id}, balance=user.balance - 150,
+                filter_by={"telegram_id": telegram_id},
+                balance=user.balance - 150,
             )
 
             await session.commit()
             return new_key.to_dict()
 
+    # TODO: ???
     @classmethod
-    @connection()
     async def update_key(
         cls,
-        session: AsyncSession,
-        telegram_id: str,
+        telegram_id: int,
         server_name: str,
         data: KeyPayloadScheme,
     ) -> bool:
-        user = cls.find_one_or_none(telegram_id=telegram_id)
-        server = ServerService.find_one_or_none(name=server_name)
+        user = await cls.find_one_or_none(telegram_id=telegram_id)
+        if user is None:
+            return False
+        server = await ServerService.find_one_or_none(name=server_name)
+        if server is None:
+            return False
 
         info = await KeyService.update_key(server=server, data=data)
+
         if info:
-            logger.info(f"User {telegram_id} successfully update key {user.key.email}")
-            await session.flush()
+            logger.info(f"User {telegram_id} successfully update key")
             return True
         return False
 
+    # TODO: ???
     @classmethod
-    @connection()
-    async def delete_key(
-        cls, session: AsyncSession, telegram_id: str, server_name: str, key_id: str
-    ) -> bool:
+    async def delete_key(cls, telegram_id: int, server_name: str, key_id: str) -> bool:
         user = await cls.find_one_or_none(telegram_id=telegram_id)
+        if user is None:
+            return False
         server = await ServerService.find_one_or_none(name=server_name)
+        if server is None:
+            return False
 
         info = await KeyService.delete_key(
             inboundId="1", uuid=key_id, server=server
         )  # TODO сделать выбор среди инбаундов
+        
         if info:
             logger.info(
-                f"User {user.telegram_id} successfully delete key {user.key.email}"
+                f"User {user.telegram_id} successfully delete key {key_id}"
             )
-            await session.flush()
             return True
         return False
 
     @classmethod
-    async def get_all_keys(cls, telegram_id: int) -> List | None:
+    async def get_all_keys(cls, telegram_id: int) -> List[Key] | None:
         user = await cls.find_one_or_none(telegram_id=telegram_id)
 
         if not user:
@@ -207,7 +216,7 @@ class UserService(BaseService):
     @classmethod
     async def find_expiry_keys(cls, telegram_id: int) -> List[Key] | None:
         keys = await cls.get_all_keys(telegram_id=telegram_id)
-        if keys:
-            expiry_keys = [key for key in keys if not key.status]
-            return expiry_keys
-        return None
+        if not keys:
+            return None
+        expiry_keys = [key for key in keys if not key.status]
+        return expiry_keys

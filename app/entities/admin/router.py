@@ -413,7 +413,7 @@ async def admin_get_totalgb(message: Message, state: FSMContext):
         await state.update_data(totalGB=totalGb)
         await del_msg(message, state)
 
-        servers = await ServerService.get_servers_list()
+        servers = await ServerService.get_servers_names()
 
         msg = await message.answer(
             text="Введите название сервера",

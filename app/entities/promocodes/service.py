@@ -8,17 +8,27 @@ class PromocodeService(BaseService):
 
     @classmethod
     async def update_count(cls, code: str):
-        promocode = await cls.find_one_or_none(code=code)
+        try:
+            promocode = await cls.find_one_or_none(code=code)
+            if promocode is None:
+                return 0
+            if promocode.count <= 0:
+                raise ValueError("Promocode count cannot be decremented further")
 
-        info = await cls.update(
-            filter_by={"code": code},
-            count=(promocode.count - 1),
-        )
+            info = await cls.update(
+                filter_by={"code": code},
+                count=(promocode.count - 1),
+            )
 
-        return info
+            return info
+        except Exception as e:
+            raise e
 
     @classmethod
     async def generate_promocode(cls, data: PromocodeScheme):
-        info = await cls.add(**data.model_dump())
+        try:
+            info = await cls.add(**data.model_dump())
 
-        return info
+            return info
+        except Exception as e:
+            raise e

@@ -278,7 +278,7 @@ async def get_all_user_keys(call: CallbackQuery):
 @router.callback_query(F.data.startswith("confirm_del:"))
 async def confirm_delete_key(call: CallbackQuery):
     await call.message.edit_text(text="Ключ удаляется 🔄")
-    
+
     key_email = call.data.split(":")[1]
     server_name = call.data.split(":")[2]
 

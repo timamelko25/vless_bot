@@ -9,15 +9,23 @@ class ServerService(BaseService):
     model = Server
 
     @classmethod
-    async def get_servers_list(cls) -> List[str]:
-        servers = await cls.find_all()
+    async def get_servers_names(cls) -> List[str]:
+        try:
+            servers = await cls.find_all()
 
-        return [server.name for server in servers]
+            return [server.name for server in servers]
+        except Exception as e:
+            raise e
 
     @classmethod
     async def delete_server(cls, server_name: str):
-        server = await cls.find_one_or_none(name=server_name)
-        await KeyService.delete(server_id=server.id)
+        try:
+            server = await cls.find_one_or_none(name=server_name)
+            if not server:
+                return 0
+            await KeyService.delete(server_id=server.id)
 
-        info = await cls.delete(name=server_name)
-        return info
+            info = await cls.delete(name=server_name)
+            return info
+        except Exception as e:
+            raise e

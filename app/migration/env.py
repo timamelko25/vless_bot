@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-from app.database import PG_URL, Base
+from app.database import Base
 from app.entities.users.models import User  # noqa: F401
 from app.entities.keys.models import Key  # noqa: F401
 from app.entities.servers.models import Server  # noqa: F401

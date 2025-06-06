@@ -21,7 +21,7 @@ router = Router()
 
 @router.callback_query(F.data == "start_getting_key")
 async def get_servers(call: CallbackQuery | Message):
-    servers_list = await ServerService.get_servers_list()
+    servers_list = await ServerService.get_servers_names()
 
     if servers_list:
         if isinstance(call, CallbackQuery):
