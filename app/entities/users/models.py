@@ -1,16 +1,16 @@
 from typing import List
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import class_mapper
+from sqlalchemy.types import BigInteger
 
 from app.database import Base
 
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
-    telegram_id: Mapped[str] = mapped_column(unique=True, nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, index=True)
 
     username: Mapped[str] = mapped_column(nullable=True)
     first_name: Mapped[str] = mapped_column(nullable=True)
@@ -18,20 +18,23 @@ class User(Base):
 
     balance: Mapped[float] = mapped_column(nullable=False, default=0)
 
-    refer_id: Mapped[str] = mapped_column(nullable=True)
+    refer_id: Mapped[int] = mapped_column(BigInteger, nullable=True)
     count_refer: Mapped[int] = mapped_column(nullable=False, default=0)
 
     description: Mapped[str] = mapped_column(nullable=True)
 
-    keys: Mapped[List['Key']] = relationship(
+    keys: Mapped[List["Key"]] = relationship(  # type: ignore  # noqa: F821
         "Key",
-        back_populates='user',
-        lazy='selectin',
-        cascade='all, delete-orphan',
+        back_populates="user",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
+    promocodes_activate: Mapped[List["Promocode"]] = relationship(  # noqa: F821 # type: ignore
+        "Promocode",
+        secondary="promo_user",
+        back_populates="users_activate",
+        lazy="selectin",
     )
 
     extend_existing = True
-
-    def to_dict(self) -> dict:
-        columns = class_mapper(self.__class__).columns
-        return {column.key: getattr(self, column.key) for column in columns}

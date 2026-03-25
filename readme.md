@@ -1,1 +1,0 @@
-docker-compose run --rm aiogram alembic upgrade head

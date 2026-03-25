@@ -1,6 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
-
-from app.entities.keys.models import Key
+from pydantic import BaseModel, ConfigDict
 
 
 class UserScheme(BaseModel):

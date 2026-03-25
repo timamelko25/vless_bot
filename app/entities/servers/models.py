@@ -1,24 +1,23 @@
 from typing import List
-from datetime import datetime
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey
 
 from app.database import Base
 
 
 class Server(Base):
-    __tablename__ = 'servers'
+    __tablename__ = "servers"
 
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
     domain: Mapped[str] = mapped_column(unique=True, nullable=False)
     description: Mapped[str] = mapped_column(nullable=True)
 
-    keys: Mapped[List["Key"]] = relationship(
+    keys: Mapped[List["Key"]] = relationship(  # type: ignore  # noqa: F821
         "Key",
-        back_populates='server',
-        lazy='selectin',
-        cascade='all, delete-orphan',
+        back_populates="server",
+        lazy="selectin",
+        cascade="all, delete-orphan",
     )
 
     extend_existing = True

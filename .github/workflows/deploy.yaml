@@ -1,0 +1,43 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - webhook
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Prepare SSH key
+      run: |
+        mkdir -p ~/.ssh
+        cat << 'EOF' > ~/.ssh/id_rsa
+        ${{ secrets.SSH_PRIVATE_KEY }}
+        EOF
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H -p ${{ secrets.SSH_PORT }} ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Upload .env file
+      run: |
+        echo "${{ secrets.ENV_FILE }}" > .env
+        scp -P ${{ secrets.SSH_PORT }} .env ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/var/vless_bot/.env
+        rm .env
+
+    - name: Deploy via SSH
+      run: |
+        ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+          cd /var/vless_bot
+          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/timamelko25/vless_bot.git
+          git pull origin webhook
+          sudo docker compose down
+          sudo docker compose build --no-cache
+          sudo docker compose up -d
+        EOF
+
+    - name: Clean up SSH
+      run: rm -rf ~/.ssh
